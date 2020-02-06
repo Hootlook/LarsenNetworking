@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29728.190
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LarsenNetworking", "LarsenNetworking\LarsenNetworking.csproj", "{92F2E551-942A-40EC-AC97-3E51188CA752}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{92F2E551-942A-40EC-AC97-3E51188CA752}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92F2E551-942A-40EC-AC97-3E51188CA752}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92F2E551-942A-40EC-AC97-3E51188CA752}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92F2E551-942A-40EC-AC97-3E51188CA752}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F6CFAB8C-1500-4891-99F9-623358E798FA}
+	EndGlobalSection
+EndGlobal
