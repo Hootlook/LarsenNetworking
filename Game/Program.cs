@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LarsenNetworking;
+using System; 
 
 namespace Game
 {
@@ -6,7 +7,10 @@ namespace Game
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            var server = new UDPServer(25250);
+           
+            Console.WriteLine($"{server.Ip}:{server.Port}");
+            Console.ReadLine();
         }
     }
 }
