@@ -7,10 +7,41 @@ namespace Game
     {
         static void Main(string[] args)
         {
-            var server = new UDPServer(25250);
+            NetEntity entity;
+            int input;
+
+        Start:
            
-            Console.WriteLine($"{server.Ip}:{server.Port}");
-            Console.ReadLine();
+            Console.WriteLine(Utils.label);
+            Utils.SlowWrite("Welcome to LarsenNetworking !\n");
+            Console.ResetColor();
+
+            Utils.SlowWrite("Please chose what to do:\n");
+            Utils.SlowWrite("1) Host a Server");
+            Utils.SlowWrite("2) Connect to a Server");
+
+            int.TryParse(Console.ReadLine(), out input);
+
+            switch (input)
+            {
+                case 1:
+                    entity = new UDPServer(5);
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.Clear();
+                    break;
+
+                case 2:
+                    entity = new UDPClient();
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.Clear();
+                    break;
+
+                default:
+                    Console.Clear();
+                    goto Start;
+            }
+            Utils.SlowWrite("YEAH");
+            Console.Read();
         }
     }
 }

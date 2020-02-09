@@ -10,15 +10,18 @@ namespace LarsenNetworking
 {
     public abstract class NetEntity
     {
-        public string Ip { get; set; }
+		public const ushort DEFAULT_PORT = 25000;
+
+		public string Ip { get; set; }
 		public ushort Port { get; set; }
 		public bool IsBound { get; set; }
         public bool IsServer { get { return this is IServer; } }
+		public uint MaxPlayers { get; set; }
+		public List<NetPlayer> Players { get; set; }
 		public Socket Socket { get; set; }
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{
-			// Check for any localhost type addresses
 			if (host == "0.0.0.0" || host == "127.0.0.1" || host == "::0")
 				return new IPEndPoint(IPAddress.Parse(host), port);
 			else if (host == "localhost")
