@@ -10,14 +10,14 @@ namespace LarsenNetworking
 {
     public abstract class NetEntity
     {
-		public const ushort DEFAULT_PORT = 25000;
+		public const ushort DEFAULT_PORT = 26950;
 
 		public string Ip { get; set; }
 		public ushort Port { get; set; }
 		public bool IsBound { get; set; }
         public bool IsServer { get { return this is IServer; } }
 		public uint MaxPlayers { get; set; }
-		public List<NetPlayer> Players { get; set; }
+		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
 		public Socket Socket { get; set; }
 
 		public static IPEndPoint ResolveHost(string host, ushort port)

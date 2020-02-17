@@ -1,0 +1,7 @@
+﻿namespace LarsenNetworking
+{
+    class ClientHandler
+    {
+
+    }
+}
