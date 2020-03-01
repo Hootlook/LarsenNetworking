@@ -20,38 +20,46 @@ namespace Game
             Utils.SlowWrite("2) Connect to a Server");
 
             int.TryParse(Console.ReadLine(), out input);
-
+            
             switch (input)
             {
                 case 1:
-                    entity = new UDPServer(5);
+                    entity = new Server(5);
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.Clear();
                     break;
 
                 case 2:
-                    entity = new UDPClient();
+                    entity = new Client();
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.Clear();
                     break;
 
                 default:
-                    entity = new UDPServer(5);
+                    entity = new Server(5);
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.Clear();
                     break;
             }
 
-            if (entity.IsServer)
+            try
             {
-                ((UDPServer)entity).Start();
-                Utils.SlowWrite("Server Started !");
+                if (entity.IsServer)
+                {
+                    ((Server)entity).Start();
+                    Utils.SlowWrite("Server Started !");
+                }
+                else
+                {
+                    ((Client)entity).Connect();
+                    Utils.SlowWrite("Packet sent to Server !");
+                }
             }
-            else
+            catch (Exception e)
             {
-                ((UDPClient)entity).Connect();
-                Utils.SlowWrite("Packet sent to Server !");
+                Console.WriteLine(e);
             }
+
             Console.Read();
         }
     }

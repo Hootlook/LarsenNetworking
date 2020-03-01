@@ -4,7 +4,7 @@ using System.Net.Sockets;
 
 namespace LarsenNetworking
 {
-    public class UDPClient : NetEntity
+    public class Client : NetEntity
     {
         public void Connect(string host = "localhost", ushort port = DEFAULT_PORT)
         {
@@ -12,10 +12,12 @@ namespace LarsenNetworking
             Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             Ip = endPoint.Address.ToString();
             Port = (ushort)endPoint.Port;
-            Socket.Bind(endPoint);
+            Socket.Bind(new IPEndPoint(endPoint.Address, endPoint.Port + 1));
 
-            byte[] packet = new byte[1];
-
+            while (true)
+            {
+                Socket.SendTo(new byte[1], endPoint);
+            }
         }
     }
 }

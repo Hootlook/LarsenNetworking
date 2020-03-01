@@ -11,11 +11,12 @@ namespace LarsenNetworking
     public abstract class NetEntity
     {
 		public const ushort DEFAULT_PORT = 26950;
+		public const ushort BUILD_VERSION = 1;
 
 		public string Ip { get; set; }
 		public ushort Port { get; set; }
 		public bool IsBound { get; set; }
-        public bool IsServer { get { return this is IServer; } }
+        public bool IsServer { get { return this is Server; } }
 		public uint MaxPlayers { get; set; }
 		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
 		public Socket Socket { get; set; }

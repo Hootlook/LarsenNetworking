@@ -42,13 +42,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientHandler.cs" />
-    <Compile Include="IServer.cs" />
+    <Compile Include="ILogger.cs" />
     <Compile Include="NetEntity.cs" />
     <Compile Include="NetPlayer.cs" />
+    <Compile Include="Packet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThreadManager.cs" />
-    <Compile Include="UDPClient.cs" />
-    <Compile Include="UDPServer.cs" />
+    <Compile Include="Client.cs" />
+    <Compile Include="Server.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
