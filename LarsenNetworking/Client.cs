@@ -16,7 +16,7 @@ namespace LarsenNetworking
 
             while (true)
             {
-                Socket.SendTo(new byte[1], endPoint);
+                Socket.SendTo(new byte[1] { (byte)Server.Request.Connection }, endPoint);
             }
         }
     }

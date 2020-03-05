@@ -46,7 +46,7 @@ namespace Game
             {
                 if (entity.IsServer)
                 {
-                    ((Server)entity).Start();
+                    ((Server)entity).Run();
                     Utils.SlowWrite("Server Started !");
                 }
                 else

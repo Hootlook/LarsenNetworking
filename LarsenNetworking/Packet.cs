@@ -10,7 +10,7 @@ namespace LarsenNetworking
     {
         //static byte Request(Message req)
         //{
-            
+
         //}
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 
 namespace LarsenNetworking
@@ -19,20 +20,21 @@ namespace LarsenNetworking
             IsBound = true;
         }
 
-        public void Start()
+        public void Run()
         {
             try
             {
-                Task.Run(NetworkLoop);
+                Task.Run(Routine);
             }
             catch (Exception e)
             {
                 Console.WriteLine($"<<< SERVER CRASHED >>> : {e.Message}");
-                throw e;
+                Socket.Dispose();
+                throw;
             }
         }
 
-        private void NetworkLoop()
+        private void Routine()
         {
             EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
             byte[] packet = new byte[5000];
@@ -41,33 +43,49 @@ namespace LarsenNetworking
             {
                 try
                 {
-                    int dataSize = Socket.ReceiveFrom(packet, ref sender);
-
-                    switch ((Request)packet[0])
+                    if (Socket.Available > 0)
                     {
-                        case Request.Connection:
-                            if (!Players.ContainsKey(sender))
-                                ConnectPlayer(sender);
-                            break;
+                        int dataSize = Socket.ReceiveFrom(packet, ref sender);
 
-                        case Request.Disconnection:
-                            if (Players.ContainsKey(sender))
-                                DisconnectPlayer(sender);
-                            break;
+                        switch ((Request)packet[0])
+                        {
+                            case Request.Connection:
+                                if (!Players.ContainsKey(sender))
+                                    ConnectPlayer(sender);
+                                break;
 
-                        case Request.Traffic:
-                            if (Players.ContainsKey(sender))
-                                ProcessPacket(packet);
-                            break;
+                            case Request.Disconnection:
+                                if (Players.ContainsKey(sender))
+                                    DisconnectPlayer(sender);
+                                break;
 
-                        default:
-                            throw new NotSupportedException();
+                            case Request.Traffic:
+                                if (Players.ContainsKey(sender))
+                                    ProcessPacket(packet);
+                                break;
+
+                            case Request.RPC:
+                                if (Players.ContainsKey(sender))
+                                    ProcessRPC(packet);
+                                break;
+
+                            default:
+                                throw new NotSupportedException();
+                        }
                     }
-
                 }
-                catch (InvalidCastException e) { Console.WriteLine($"/!\\ Failed to read packet /!\\ : {e.Message}"); }
+                catch (InvalidCastException e) { Console.WriteLine($"/!\\ Failed to read request /!\\ : {e.Message}"); }
                 catch (NotSupportedException e) { Console.WriteLine($"/!\\ Request not supported /!\\ : {e.Message}"); }
             }
+
+            try
+            {
+                foreach (var player in Players)
+                {
+                    Socket.SendTo(new byte[1], player.Key);
+                }
+            }
+            catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
         }
 
         public enum Request
@@ -75,6 +93,11 @@ namespace LarsenNetworking
             Connection,
             Disconnection,
             Traffic,
+            RPC
+        }
+        private void ProcessRPC(byte[] packet)
+        {
+            throw new NotImplementedException();
         }
 
         private void ProcessPacket(byte[] packet)
@@ -89,7 +112,15 @@ namespace LarsenNetworking
 
         private void ConnectPlayer(EndPoint sender)
         {
-            throw new NotImplementedException();
+            var player = new NetPlayer
+            {
+                Ip = ((IPEndPoint)sender).Address,
+                Name = $"Player {Players.Count + 1}"
+            };
+
+            Players.Add(sender, player);
+            Console.WriteLine($"{player.Name} ({player.Ip}) Joined");
+            new BinaryFormatter().Serialize
         }
     }
 }

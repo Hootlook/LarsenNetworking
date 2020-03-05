@@ -1,8 +1,13 @@
-﻿namespace LarsenNetworking
+﻿using System.Net;
+
+namespace LarsenNetworking
 {
     public class NetPlayer
     {
+        public string Name { get; set; }
         public int Ping { get; set; }
+        public IPAddress Ip { get; set; }
+
         enum State
         {
             Connected,
