@@ -4,7 +4,7 @@ using System.Net.Sockets;
 
 namespace LarsenNetworking
 {
-    public class Client : NetEntity
+    public class Client : NetBase
     {
         public void Connect(string host = "localhost", ushort port = DEFAULT_PORT)
         {
@@ -16,7 +16,9 @@ namespace LarsenNetworking
 
             while (true)
             {
-                Socket.SendTo(new byte[1] { (byte)Server.Request.Connection }, endPoint);
+                var packet = Packet.Pack(new Data {  ack = true, request = 50, frame = 100 });
+                
+                Socket.SendTo(packet, endPoint);
             }
         }
     }

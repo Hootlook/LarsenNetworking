@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LarsenNetworking
 {
-    public class Server : NetEntity
+    public class Server : NetBase
     { 
 		public Server(uint maxPlayers)
         {
@@ -37,7 +37,8 @@ namespace LarsenNetworking
         private void Routine()
         {
             EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-            byte[] packet = new byte[5000];
+            byte[] buffer = new byte[6000];
+            Data packet;
 
             while (IsBound)
             {
@@ -45,9 +46,11 @@ namespace LarsenNetworking
                 {
                     if (Socket.Available > 0)
                     {
-                        int dataSize = Socket.ReceiveFrom(packet, ref sender);
+                        int dataSize = Socket.ReceiveFrom(buffer, ref sender);
 
-                        switch ((Request)packet[0])
+                        packet = Packet.Unpack(buffer);
+                        
+                        switch ((Request)buffer[0])
                         {
                             case Request.Connection:
                                 if (!Players.ContainsKey(sender))
@@ -61,12 +64,12 @@ namespace LarsenNetworking
 
                             case Request.Traffic:
                                 if (Players.ContainsKey(sender))
-                                    ProcessPacket(packet);
+                                    ProcessPacket(buffer);
                                 break;
 
                             case Request.RPC:
                                 if (Players.ContainsKey(sender))
-                                    ProcessRPC(packet);
+                                    ProcessRPC(buffer);
                                 break;
 
                             default:
@@ -95,7 +98,9 @@ namespace LarsenNetworking
             Traffic,
             RPC
         }
-        private void ProcessRPC(byte[] packet)
+
+        [Request]
+        public void ProcessRPC(byte[] packet)
         {
             throw new NotImplementedException();
         }
@@ -120,7 +125,6 @@ namespace LarsenNetworking
 
             Players.Add(sender, player);
             Console.WriteLine($"{player.Name} ({player.Ip}) Joined");
-            new BinaryFormatter().Serialize
         }
     }
 }

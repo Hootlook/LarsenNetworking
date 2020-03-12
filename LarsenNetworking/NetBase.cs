@@ -5,21 +5,36 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
+using System.Reflection;
 
 namespace LarsenNetworking
 {
-    public abstract class NetEntity
-    {
+	public abstract class NetBase
+	{
 		public const ushort DEFAULT_PORT = 26950;
 		public const ushort BUILD_VERSION = 1;
 
 		public string Ip { get; set; }
 		public ushort Port { get; set; }
 		public bool IsBound { get; set; }
-        public bool IsServer { get { return this is Server; } }
+		public bool IsServer { get { return this is Server; } }
 		public uint MaxPlayers { get; set; }
-		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
 		public Socket Socket { get; set; }
+		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
+		public List<Action> Requests { get; set; }
+
+		public NetBase()
+		{
+			var taggedMethods = from t in Assembly.GetExecutingAssembly().GetTypes()
+								from m in t.GetMethods()
+								where m.GetCustomAttributes<RequestAttribute>().Count() > 0
+								select m;
+			foreach (var item in taggedMethods)
+			{
+				Requests.Add(new Action(item.);
+			}
+
+		}
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{

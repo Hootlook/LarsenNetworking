@@ -8,7 +8,7 @@ namespace Game
     {
         static void Main(string[] args)
         {
-            NetEntity entity;
+            NetBase entity;
             int input;
            
             Console.WriteLine(Utils.label);
