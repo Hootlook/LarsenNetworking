@@ -69,7 +69,7 @@ namespace LarsenNetworking
 
                             case Request.RPC:
                                 if (Players.ContainsKey(sender))
-                                    ProcessRPC(buffer);
+                                    ProcessRPC();
                                 break;
 
                             default:
@@ -100,12 +100,13 @@ namespace LarsenNetworking
         }
 
         [Request]
-        public void ProcessRPC(byte[] packet)
+        public static void ProcessRPC()
         {
             throw new NotImplementedException();
         }
 
-        private void ProcessPacket(byte[] packet)
+        [Request]
+        public static void ProcessPacket(byte[] packet)
         {
             throw new NotImplementedException();
         }

@@ -21,7 +21,7 @@ namespace LarsenNetworking
 		public uint MaxPlayers { get; set; }
 		public Socket Socket { get; set; }
 		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
-		public List<Action> Requests { get; set; }
+		public List<Delegate> Requests { get; set; } = new List<Delegate>();
 
 		public NetBase()
 		{
@@ -29,11 +29,14 @@ namespace LarsenNetworking
 								from m in t.GetMethods()
 								where m.GetCustomAttributes<RequestAttribute>().Count() > 0
 								select m;
-			foreach (var item in taggedMethods)
-			{
-				Requests.Add(new Action(item.);
-			}
 
+			foreach (var method in taggedMethods)
+			{
+				ParameterInfo[] _params = method.GetParameters();
+
+
+				Requests.Add(Delegate.CreateDelegate(typeof(Delegate), method));
+			}
 		}
 
 		public static IPEndPoint ResolveHost(string host, ushort port)

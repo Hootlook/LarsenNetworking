@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace LarsenNetworking
 {
     [AttributeUsage(AttributeTargets.Method)]
-    sealed class RequestAttribute : Attribute
+    public class RequestAttribute : Attribute
     {
         public RequestAttribute()
         {
