@@ -3,16 +3,16 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LarsenNetworking
 {
-    public class Server : NetBase
+    public class Server : Networker
     { 
 		public Server(uint maxPlayers)
         {
             var endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), DEFAULT_PORT);
-            Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             Ip = endPoint.Address.ToString();
             Port = (ushort)endPoint.Port;
             MaxPlayers = maxPlayers;
@@ -37,8 +37,10 @@ namespace LarsenNetworking
         private void Routine()
         {
             EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
+            DateTime lastLoop = DateTime.Now; 
             byte[] buffer = new byte[6000];
-            Data packet;
+            NetPlayer currentPlayer;
+            Packet packet;
 
             while (IsBound)
             {
@@ -49,67 +51,34 @@ namespace LarsenNetworking
                         int dataSize = Socket.ReceiveFrom(buffer, ref sender);
 
                         packet = Packet.Unpack(buffer);
-                        
-                        switch ((Request)buffer[0])
+                        Console.WriteLine(sender);
+
+                        if (Players.ContainsKey(sender))
                         {
-                            case Request.Connection:
-                                if (!Players.ContainsKey(sender))
-                                    ConnectPlayer(sender);
-                                break;
+                            currentPlayer = Players[sender];
 
-                            case Request.Disconnection:
-                                if (Players.ContainsKey(sender))
-                                    DisconnectPlayer(sender);
-                                break;
-
-                            case Request.Traffic:
-                                if (Players.ContainsKey(sender))
-                                    ProcessPacket(buffer);
-                                break;
-
-                            case Request.RPC:
-                                if (Players.ContainsKey(sender))
-                                    ProcessRPC();
-                                break;
-
-                            default:
-                                throw new NotSupportedException();
                         }
+                        else
+                        {
+                            //Packet.Unpack(data.data)
+                        }
+
                     }
                 }
-                catch (InvalidCastException e) { Console.WriteLine($"/!\\ Failed to read request /!\\ : {e.Message}"); }
-                catch (NotSupportedException e) { Console.WriteLine($"/!\\ Request not supported /!\\ : {e.Message}"); }
-            }
+                catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
 
-            try
-            {
-                foreach (var player in Players)
+                try
                 {
-                    Socket.SendTo(new byte[1], player.Key);
+                    Time.TimeStep++;
+
+                    foreach (var player in Players)
+                    {
+                        Socket.SendTo(new byte[1], player.Key);
+                    }
                 }
+                catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
             }
-            catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
-        }
-
-        public enum Request
-        {
-            Connection,
-            Disconnection,
-            Traffic,
-            RPC
-        }
-
-        [Request]
-        public static void ProcessRPC()
-        {
-            throw new NotImplementedException();
-        }
-
-        [Request]
-        public static void ProcessPacket(byte[] packet)
-        {
-            throw new NotImplementedException();
-        }
+        }        
 
         private void DisconnectPlayer(EndPoint sender)
         {
@@ -126,6 +95,11 @@ namespace LarsenNetworking
 
             Players.Add(sender, player);
             Console.WriteLine($"{player.Name} ({player.Ip}) Joined");
+        }
+
+        protected override void Initialisation()
+        {
+            throw new NotImplementedException();
         }
     }
 }

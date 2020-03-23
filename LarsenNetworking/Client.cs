@@ -4,22 +4,24 @@ using System.Net.Sockets;
 
 namespace LarsenNetworking
 {
-    public class Client : NetBase
+    public class Client : Networker
     {
-        public void Connect(string host = "localhost", ushort port = DEFAULT_PORT)
+        public IPEndPoint ServerIp { get; set; }
+        public void Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
         {
-            var endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), DEFAULT_PORT);
-            Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            Ip = endPoint.Address.ToString();
-            Port = (ushort)endPoint.Port;
-            Socket.Bind(new IPEndPoint(endPoint.Address, endPoint.Port + 1));
+            ServerIp = new IPEndPoint(IPAddress.Parse(host), port);
 
             while (true)
             {
-                var packet = Packet.Pack(new Data {  ack = true, request = 50, frame = 100 });
+                var packet = Packet.Pack(new Packet {  ack = true, rpc = 50, frame = 100 });
                 
-                Socket.SendTo(packet, endPoint);
+                Socket.SendTo(packet, ServerIp);
             }
+        }
+
+        protected override void Initialisation()
+        {
+            throw new NotImplementedException();
         }
     }
 }

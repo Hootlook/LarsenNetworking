@@ -43,14 +43,15 @@
   <ItemGroup>
     <Compile Include="ClientHandler.cs" />
     <Compile Include="ILogger.cs" />
-    <Compile Include="NetBase.cs" />
+    <Compile Include="Networker.cs" />
     <Compile Include="NetPlayer.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RequestAttribute.cs" />
+    <Compile Include="Rpc.cs" />
     <Compile Include="ThreadManager.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Server.cs" />
+    <Compile Include="Time.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

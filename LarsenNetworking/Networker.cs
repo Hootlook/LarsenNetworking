@@ -9,35 +9,36 @@ using System.Reflection;
 
 namespace LarsenNetworking
 {
-	public abstract class NetBase
+	public abstract class Networker
 	{
 		public const ushort DEFAULT_PORT = 26950;
 		public const ushort BUILD_VERSION = 1;
+		const string CONNECT_MESSAGE = "Hello i'd like to play pls";
 
+
+		public enum State
+		{
+			Disconnected,
+			Initialising,
+			Connected,
+		}
 		public string Ip { get; set; }
 		public ushort Port { get; set; }
 		public bool IsBound { get; set; }
+		public State CurrentState { get; set; }
 		public bool IsServer { get { return this is Server; } }
+		public Time Time { get; set; }
 		public uint MaxPlayers { get; set; }
 		public Socket Socket { get; set; }
 		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
-		public List<Delegate> Requests { get; set; } = new List<Delegate>();
 
-		public NetBase()
+		public Networker()
 		{
-			var taggedMethods = from t in Assembly.GetExecutingAssembly().GetTypes()
-								from m in t.GetMethods()
-								where m.GetCustomAttributes<RequestAttribute>().Count() > 0
-								select m;
-
-			foreach (var method in taggedMethods)
-			{
-				ParameterInfo[] _params = method.GetParameters();
-
-
-				Requests.Add(Delegate.CreateDelegate(typeof(Delegate), method));
-			}
+			Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			Time = new Time();
 		}
+
+		protected abstract void Initialisation();
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{
