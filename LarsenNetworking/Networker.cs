@@ -38,6 +38,11 @@ namespace LarsenNetworking
 			Time = new Time();
 		}
 
+		protected void Route(Action action)
+		{
+
+		}
+
 		protected abstract void Initialisation();
 
 		public static IPEndPoint ResolveHost(string host, ushort port)

@@ -34,6 +34,8 @@ namespace LarsenNetworking
             }
         }
 
+        
+
         private void Routine()
         {
             EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
@@ -71,6 +73,8 @@ namespace LarsenNetworking
                 {
                     Time.TimeStep++;
 
+                    Rpc currentRpc = Rpc.toSend.Dequeue();
+
                     foreach (var player in Players)
                     {
                         Socket.SendTo(new byte[1], player.Key);
@@ -101,5 +105,7 @@ namespace LarsenNetworking
         {
             throw new NotImplementedException();
         }
+
+        
     }
 }

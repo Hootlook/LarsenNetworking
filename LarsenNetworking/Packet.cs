@@ -3,7 +3,7 @@ using System.IO;
 
 namespace LarsenNetworking
 {
-    public struct Packet
+    public class Packet
     {
         public uint frame;
         public byte rpc;
@@ -11,20 +11,20 @@ namespace LarsenNetworking
         public byte id;
         public byte[] data;
 
-        const int DATA_BUFFER_CAP = 1000;
+        public List<byte[]> Data { get; set; }
+
         public static byte[] Pack(Packet data)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                if (data.data == null)
-                    data.data = new byte[1];
-
                 writer.Write(data.frame);
                 writer.Write(data.rpc);
                 writer.Write(data.ack);
                 writer.Write(data.id);
-                writer.Write(data.data);
+
+                if (data.data != null)
+                    writer.Write(data.data);
 
                 return stream.ToArray();
             }
@@ -41,11 +41,39 @@ namespace LarsenNetworking
                 s.rpc = reader.ReadByte();
                 s.ack = reader.ReadBoolean();
                 s.id = reader.ReadByte();
-                s.data = reader.ReadBytes(DATA_BUFFER_CAP);
+                s.data = reader.ReadBytes((int)stream.Length);
 
                 return s;
             }
         }
 
+        public void Add<T>(T arg)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write((dynamic)arg);
+                Data.Add(stream.ToArray());
+            }
+        }
+
+        public void Add(long arg)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(arg);
+                Data.Add(stream.ToArray());
+            }
+        }    
+        public void Add(string arg)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(arg);
+                Data.Add(stream.ToArray());
+            }
+        }
     }
 }
