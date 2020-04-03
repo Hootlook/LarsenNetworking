@@ -19,22 +19,22 @@ namespace LarsenNetworking
             Action = action;
         }
 
-        private static Dictionary<string, int> _commandLookUp = new Dictionary<string, int>();
-        private static List<Rpc> _commands = new List<Rpc>();
+        public static Dictionary<string, int> commandLookUp = new Dictionary<string, int>();
+        public static List<Rpc> commands = new List<Rpc>();
         public static List<Rpc> pending = new List<Rpc>();
         public static Queue<Rpc> toSend = new Queue<Rpc>();
 
         public static void Register(Rpc rpc)
         {
-            rpc.Id = _commands.Count + 1;
-            _commandLookUp.Add(rpc.Name, _commands.Count);
-            _commands.Add(rpc);
+            rpc.Id = commands.Count + 1;
+            commandLookUp.Add(rpc.Name, commands.Count);
+            commands.Add(rpc);
         }
 
         public static void Call(string rpcName, bool reliable)
         {
-            int index = _commandLookUp[rpcName];
-            Rpc rpc = _commands[index];
+            int index = commandLookUp[rpcName];
+            Rpc rpc = commands[index];
 
             rpc.Reliable = reliable;
 

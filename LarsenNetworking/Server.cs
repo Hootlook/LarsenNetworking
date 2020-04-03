@@ -53,18 +53,16 @@ namespace LarsenNetworking
                         int dataSize = Socket.ReceiveFrom(buffer, ref sender);
 
                         packet = Packet.Unpack(buffer);
-                        Console.WriteLine(sender);
+                        
+                        Rpc rpc = Rpc.commands[packet.rpc];
 
-                        if (Players.ContainsKey(sender))
-                        {
-                            currentPlayer = Players[sender];
+                        if (!Players.ContainsKey(sender))
+                            if (rpc.Name != "ConnectPlayer")
+                                continue;
 
-                        }
-                        else
-                        {
-                            //Packet.Unpack(data.data)
-                        }
+                        rpc.Action.Invoke(packet);
 
+                        Rpc.toSend.Enqueue(rpc);
                     }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
@@ -73,7 +71,7 @@ namespace LarsenNetworking
                 {
                     Time.TimeStep++;
 
-                    Rpc currentRpc = Rpc.toSend.Dequeue();
+                    Rpc nextRpc = Rpc.toSend.Dequeue();
 
                     foreach (var player in Players)
                     {
