@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace LarsenNetworking
@@ -34,14 +31,12 @@ namespace LarsenNetworking
             }
         }
 
-        
-
         private void Routine()
         {
             EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
             DateTime lastLoop = DateTime.Now; 
             byte[] buffer = new byte[6000];
-            NetPlayer currentPlayer;
+            //NetPlayer currentPlayer;
             Packet packet;
 
             while (IsBound)
@@ -54,10 +49,10 @@ namespace LarsenNetworking
 
                         packet = Packet.Unpack(buffer);
                         
-                        Rpc rpc = Rpc.commands[packet.rpc];
+                        Rpc rpc = Rpc.list[packet.rpc];
 
                         if (!Players.ContainsKey(sender))
-                            if (rpc.Name != "ConnectPlayer")
+                            if (rpc.Label is ServerBase.Connect)
                                 continue;
 
                         rpc.Action.Invoke(packet);
