@@ -1,6 +1,6 @@
 ﻿namespace LarsenNetworking
 {
-	public enum ServerBase
+	public enum BaseRpc
 	{
 		Connect
 	}

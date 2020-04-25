@@ -52,7 +52,7 @@ namespace LarsenNetworking
                         Rpc rpc = Rpc.list[packet.rpc];
 
                         if (!Players.ContainsKey(sender))
-                            if (rpc.Label is ServerBase.Connect)
+                            if (rpc.Label is BaseRpc.Connect)
                                 continue;
 
                         rpc.Action.Invoke(packet);
