@@ -47,17 +47,17 @@ namespace LarsenNetworking
                     {
                         int dataSize = Socket.ReceiveFrom(buffer, ref sender);
 
-                        packet = Packet.Unpack(buffer);
+                        //packet = Packet.Unpack(buffer);
                         
-                        Rpc rpc = Rpc.list[packet.rpc];
+                        //Rpc rpc = Rpc.list[packet.rpc];
 
-                        if (!Players.ContainsKey(sender))
-                            if (rpc.Label is BaseRpc.Connect)
-                                continue;
+                        //if (!Players.ContainsKey(sender))
+                        //    if (rpc.Label is BaseRpc.Connect)
+                        //        continue;
 
-                        rpc.Action.Invoke(packet);
+                        //rpc.Action.Invoke(packet);
 
-                        Rpc.toSend.Enqueue(rpc);
+                        //Rpc.toSend.Enqueue(rpc);
                     }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }

@@ -1,30 +1,28 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace LarsenNetworking
 {
     public class Packet
     {
-        public uint frame;
-        public byte rpc;
-        public bool ack;
-        public byte id;
-        public byte[] data;
+        public uint SequenceNumber;
+        public uint lastRemoteSeq;
+        public byte ackMask;
+        public List<byte> Data { get; set; }
 
-        public List<byte[]> Data { get; set; }
-
-        public static byte[] Pack(Packet data)
+        public byte[] Pack()
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.Write(data.frame);
-                writer.Write(data.rpc);
-                writer.Write(data.ack);
-                writer.Write(data.id);
+                writer.Write(SequenceNumber);
+                writer.Write(lastRemoteSeq);
+                writer.Write(ackMask);
 
-                if (data.data != null)
-                    writer.Write(data.data);
+                if (Data != null)
+                    writer.Write(Data.ToArray());
 
                 return stream.ToArray();
             }
@@ -37,42 +35,31 @@ namespace LarsenNetworking
             {
                 var s = default(Packet);
 
-                s.frame = reader.ReadUInt32();
-                s.rpc = reader.ReadByte();
-                s.ack = reader.ReadBoolean();
-                s.id = reader.ReadByte();
-                s.data = reader.ReadBytes((int)stream.Length);
+                s.SequenceNumber = reader.ReadUInt32();
+                s.lastRemoteSeq = reader.ReadUInt32();
+                s.ackMask = reader.ReadByte();
+
+                for (int a = 0; a < stream.Length; a++)
+                    s.Data.Add(stream.ToArray()[a]);
 
                 return s;
             }
         }
 
-        public void Add<T>(T arg)
+        public void WriteMessage(byte id, object[] fields)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.Write((dynamic)arg);
-                Data.Add(stream.ToArray());
-            }
-        }
+                writer.Write(id);
 
-        public void Add(long arg)
-        {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
-            {
-                writer.Write(arg);
-                Data.Add(stream.ToArray());
-            }
-        }    
-        public void Add(string arg)
-        {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
-            {
-                writer.Write(arg);
-                Data.Add(stream.ToArray());
+                for (int i = 0; i < fields.Length; i++)
+                {
+                    writer.Write((dynamic)fields[i]);
+
+                    for (int a = 0; a < stream.Length; a++)
+                        Data.Add(stream.ToArray()[a]);
+                }
             }
         }
     }

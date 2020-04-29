@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace LarsenNetworking
 {
@@ -10,7 +11,30 @@ namespace LarsenNetworking
         public void Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
         {
             ServerIp = new IPEndPoint(IPAddress.Parse(host), port);
+            EndPoint sender = ServerIp;
+            byte[] buffer = new byte[1500];
 
+            var packet = new Packet();
+            packet.WriteMessage(1, new[] { CONNECT_MESSAGE });
+
+            while (true)
+            {
+                Socket.SendTo(packet.Pack(), ServerIp);
+
+                Thread.Sleep(1000);
+
+                int dataSize = Socket.ReceiveFrom(buffer, ref sender);
+
+                if (dataSize > 0)
+                {
+
+                }
+
+            }
+        }
+
+        private void Routine()
+        {
             while (true)
             {
                 EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
@@ -25,7 +49,7 @@ namespace LarsenNetworking
                     {
                         int dataSize = Socket.ReceiveFrom(buffer, ref sender);
 
-                        packet = Packet.Unpack(buffer);
+                        //packet = Packet.Unpack(buffer);
                         Console.WriteLine(sender);
 
                         if (Players.ContainsKey(sender))
@@ -46,9 +70,9 @@ namespace LarsenNetworking
                 {
                     Time.TimeStep++;
 
-                    byte[] packetToSend = Packet.Pack(new Packet { ack = true, rpc = 50, frame = 100 });
+                    //byte[] packetToSend = Packet.Pack(new Packet { ack = true, rpc = 50, frame = 100 });
 
-                    Socket.SendTo(packetToSend, ServerIp);
+                    //Socket.SendTo(packetToSend, ServerIp);
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
             }

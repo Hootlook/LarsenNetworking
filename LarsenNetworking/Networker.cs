@@ -13,7 +13,7 @@ namespace LarsenNetworking
 	{
 		public const ushort DEFAULT_PORT = 26950;
 		public const ushort BUILD_VERSION = 1;
-		const string CONNECT_MESSAGE = "Hello i'd like to play pls";
+		public const string CONNECT_MESSAGE = "Hello i'd like to play pls";
 
 
 		public enum State
