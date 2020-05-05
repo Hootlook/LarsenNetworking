@@ -6,31 +6,29 @@ namespace LarsenNetworking
 {
     public class Rpc
     {
-        public int Id { get; private set; }
-        public int TimeStep { get; private set; }
-        public bool Reliable { get; private set; }
-        public Enum Label { get; set; }
+        public Enum Name { get; set; }
         public Delegate Method { get; set; }
         public ParameterInfo[] Parameters { get; set; }
+        public object[] Values { get; set; }
 
+        public enum SendingMethod
+        {
+            Reliable,
+            Unreliable
+        }
         public static Dictionary<Enum, int> lookup = new Dictionary<Enum, int>();
         public static List<Rpc> list = new List<Rpc>();
         public static Queue<Rpc> toSend = new Queue<Rpc>();
 
-        //public static void Register(Enum methodName, Type methodLocation)
-        //{
-
-        //}
-
-        public static void Register<T>(Enum methodName, T method)
+        public static void Register<T>(Enum name, T method)
             where T : Delegate
         {
-            if (!lookup.ContainsKey(methodName))
+            if (!lookup.ContainsKey(name))
             {
-                lookup.Add(methodName, list.Count);
+                lookup.Add(name, list.Count);
                 list.Add(new Rpc()
                 {
-                    Label = methodName,
+                    Name = name,
                     Method = method,
                     Parameters = method.Method.GetParameters()
                 });
@@ -39,12 +37,21 @@ namespace LarsenNetworking
                 throw new Exception("Already registered");
         }
 
-        public static void Call(Enum key)
+        public static void Call(Enum rpcName, SendingMethod sending)
         {
-
             //TODO
             lock (toSend)
-                toSend.Enqueue(list[lookup[key]]);
+                toSend.Enqueue(list[lookup[rpcName]]);
+        }
+
+        public Type[] GetParameters() 
+        {
+            Type[] types = new Type[Parameters.Length];
+
+            for (int i = 0; i < Parameters.Length; i++)
+                types[i] = Parameters[i].ParameterType;
+
+            return types;
         }
     }
 }

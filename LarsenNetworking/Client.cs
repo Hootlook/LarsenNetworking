@@ -15,7 +15,7 @@ namespace LarsenNetworking
             byte[] buffer = new byte[1500];
 
             var packet = new Packet();
-            packet.WriteMessage(1, new[] { CONNECT_MESSAGE });
+            //packet.WriteMessage(1, new[] { CONNECT_MESSAGE });
 
             while (true)
             {

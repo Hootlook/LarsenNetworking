@@ -15,7 +15,6 @@ namespace LarsenNetworking
 		public const ushort BUILD_VERSION = 1;
 		public const string CONNECT_MESSAGE = "Hello i'd like to play pls";
 
-
 		public enum State
 		{
 			Disconnected,
@@ -36,11 +35,6 @@ namespace LarsenNetworking
 		{
 			Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			Time = new Time();
-		}
-
-		protected void Route(Action action)
-		{
-
 		}
 
 		protected abstract void Initialisation();

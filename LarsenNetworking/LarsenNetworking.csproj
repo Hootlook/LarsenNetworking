@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientHandler.cs" />
+    <Compile Include="Command.cs" />
     <Compile Include="Enum.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="Networker.cs" />

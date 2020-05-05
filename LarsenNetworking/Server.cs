@@ -36,7 +36,7 @@ namespace LarsenNetworking
             EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
             DateTime lastLoop = DateTime.Now; 
             byte[] buffer = new byte[6000];
-            //NetPlayer currentPlayer;
+            NetPlayer currentPlayer;
             Packet packet;
 
             while (IsBound)
@@ -45,10 +45,10 @@ namespace LarsenNetworking
                 {
                     if (Socket.Available > 0)
                     {
-                        int dataSize = Socket.ReceiveFrom(buffer, ref sender);
+                        //int dataSize = Socket.ReceiveFrom(buffer, ref sender);
 
                         //packet = Packet.Unpack(buffer);
-                        
+
                         //Rpc rpc = Rpc.list[packet.rpc];
 
                         //if (!Players.ContainsKey(sender))
