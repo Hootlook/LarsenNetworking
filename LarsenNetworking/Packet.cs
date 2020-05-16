@@ -5,10 +5,77 @@ using System.Linq;
 
 namespace LarsenNetworking
 {
+    public class PacketHandler
+    {
+        public class PacketData
+        {
+            public bool acked;
+        }
+        const int BUFFER_SIZE = 1024;
+        public Queue<Packet> OutGoingPackets { get; set; }
+        public Queue<Packet> InComingPackets { get; set; }
+        public ushort Sequence { get; set; }
+        public ushort Ack { get; set; }
+        public uint AckBits { get; set; }
+
+        private uint[] sequenceBuffer = new uint[BUFFER_SIZE];
+
+        private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
+
+        public PacketData GetPacketData(uint sequence)
+        {
+            uint index = sequence % BUFFER_SIZE;
+            if (sequenceBuffer[index] == sequence)
+                return packetDatas[index];
+            else
+                return null;
+        }
+
+        public ref PacketData InsertPacketData(uint sequence)
+        {
+            uint index = sequence % BUFFER_SIZE;
+            sequenceBuffer[index] = sequence;
+            return ref packetDatas[index];
+        }
+
+        void Send()
+        {
+            Packet outGoingPacket = new Packet();
+            Packet mostRecentPacket = new Packet();
+
+            InsertPacketData(Sequence).acked = false;
+
+            outGoingPacket.Sequence = Sequence;
+            outGoingPacket.Ack = mostRecentPacket.Ack;
+            outGoingPacket.AckBits = AckBits;
+
+            // Send the packet and increment the send packet sequence number
+
+            Sequence++;
+        }
+
+        void Receive()
+        {
+            Packet mostRecentPacket = new Packet();
+            Packet receivedPacket = new Packet();
+
+            if (Sequence > mostRecentPacket.Sequence)
+                mostRecentPacket.Sequence = Sequence;
+
+            InsertPacketData(receivedPacket.Sequence);
+
+            for (int i = 0; i < packetDatas.Length; i++)
+                if (!packetDatas[i].acked)
+                    packetDatas[i].acked = true;
+        }
+    }
+
     public class Packet
     {
-        public uint SequenceNumber { get; set; }
-        public uint LastSeenNumber { get; set; }
+        public const int mtuLimit = 1408;
+        public ushort Sequence { get; set; }
+        public ushort Ack { get; set; }
+        public uint AckBits { get; set; }
         public List<byte> Data { get; set; }
         public List<Rpc> Messages { get; set; }
 
@@ -17,8 +84,8 @@ namespace LarsenNetworking
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.Write(SequenceNumber);
-                writer.Write(LastSeenNumber);
+                writer.Write(Sequence);
+                writer.Write(Ack);
 
                 if (Data != null)
                     writer.Write(Data.ToArray());
@@ -36,8 +103,8 @@ namespace LarsenNetworking
                 {
                     Packet p = new Packet();
 
-                    p.SequenceNumber = reader.ReadUInt32();
-                    p.LastSeenNumber = reader.ReadUInt32();
+                    p.Sequence = reader.ReadUInt16();
+                    p.Ack = reader.ReadUInt16();
 
                     while (stream.Length > 0)
                     {

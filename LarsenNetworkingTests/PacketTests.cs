@@ -14,18 +14,13 @@ namespace LarsenNetworking.Tests
         [TestMethod()]
         public void PackTest()
         {
-            Command.Initialize();
-
             Packet packet = new Packet();
 
-            var cmd = new PlayerMove()
-            {
+            Command.Register(new IMessage[] {
+                new ChallengeConnectMessage("help"),
+                new ConnectMessage()
+            });
 
-            };
-
-            cmd.Send(Method.Unreliable);
-
-            var g = Command.List;
 
             Assert.Fail();
         }

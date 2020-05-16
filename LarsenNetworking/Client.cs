@@ -11,6 +11,7 @@ namespace LarsenNetworking
         public void Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
         {
             ServerIp = new IPEndPoint(IPAddress.Parse(host), port);
+            PacketHandler packetHandler = new PacketHandler();
             EndPoint sender = ServerIp;
             byte[] buffer = new byte[1500];
 
