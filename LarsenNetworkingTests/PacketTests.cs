@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace LarsenNetworking.Tests
 {
@@ -26,8 +27,37 @@ namespace LarsenNetworking.Tests
         }
 
         [TestMethod()]
+        public void Read()
+        {
+            byte[] sendBytes;
+            string receiveBytes;
+
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write("Is anybody there?");
+                sendBytes = stream.ToArray();
+            }
+
+            using (var stream = new MemoryStream(sendBytes))
+            using (var reader = new BinaryReader(stream))
+            {
+                receiveBytes = (string)reader.Read(typeof(string));
+            }
+
+            Assert.IsTrue(receiveBytes == "Is anybody there?");
+        }
+
+        [TestMethod()]
         public void UnpackTest()
         {
+            Command.Register(new IMessage[] { new PrintMessage("") });
+            Command command = new Command(new PrintMessage("PING"));
+            string changedValue = "PONG";
+
+            command.Fields[0].SetValue(command, changedValue);
+
+
             Assert.Fail();
         }
 

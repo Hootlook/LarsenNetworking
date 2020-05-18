@@ -14,6 +14,7 @@ namespace LarsenNetworking
 		public const ushort DEFAULT_PORT = 26950;
 		public const ushort BUILD_VERSION = 1;
 		public const string CONNECT_MESSAGE = "Hello i'd like to play pls";
+		private const int SIO_UDP_CONNRESET = -1744830452;
 
 		public enum State
 		{
@@ -21,20 +22,24 @@ namespace LarsenNetworking
 			Initialising,
 			Connected,
 		}
-		public string Ip { get; set; }
-		public ushort Port { get; set; }
-		public bool IsBound { get; set; }
+
+		public bool IsBound { get { return Socket.Client.IsBound; } }
 		public State CurrentState { get; set; }
+		public IPEndPoint PeerIp { get; set; }
+		public IPEndPoint Ip { get; set; }
 		public bool IsServer { get { return this is Server; } }
 		public Time Time { get; set; }
 		public uint MaxPlayers { get; set; }
-		public Socket Socket { get; set; }
+		public UdpClient Socket { get; set; }
 		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
 
 		public Networker()
 		{
-			Socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+			Ip = ResolveHost("127.0.0.1", DEFAULT_PORT);
+			Socket = new UdpClient();
 			Time = new Time();
+
+			Socket.Client.IOControl((IOControlCode)SIO_UDP_CONNRESET, new byte[] { 0, 0, 0, 0 }, null);
 		}
 
 		protected abstract void Initialisation();

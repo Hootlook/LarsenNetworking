@@ -52,7 +52,7 @@ namespace Game
                 else
                 {
                     ((Client)entity).Connect();
-                    Utils.SlowWrite("Packet sent to Server !");
+                    Utils.SlowWrite("Client Started !");
                 }
             }
             catch (Exception e)

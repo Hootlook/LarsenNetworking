@@ -1,19 +1,27 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 
 namespace LarsenNetworking
 {
     public class PacketHandler
     {
+        public PacketHandler(UdpClient socket)
+        {
+            Socket = socket;
+        }
         public class PacketData
         {
             public bool acked;
         }
         const int BUFFER_SIZE = 1024;
-        public Queue<Packet> OutGoingPackets { get; set; }
-        public Queue<Packet> InComingPackets { get; set; }
+        public UdpClient Socket { get; set; }
+        public Queue<Packet> OutGoingPackets { get; set; } = new Queue<Packet>();
+        public Queue<Packet> InComingPackets { get; set; } = new Queue<Packet>();
         public ushort Sequence { get; set; }
         public ushort Ack { get; set; }
         public uint AckBits { get; set; }
@@ -35,49 +43,63 @@ namespace LarsenNetworking
         {
             uint index = sequence % BUFFER_SIZE;
             sequenceBuffer[index] = sequence;
+            packetDatas[index] = new PacketData();
             return ref packetDatas[index];
         }
 
-        void Send()
+        public void Send(IPEndPoint receiver)
         {
-            Packet outGoingPacket = new Packet();
-            Packet mostRecentPacket = new Packet();
+            if (OutGoingPackets.Count <= 0) return;
+
+            Packet outGoingPacket = OutGoingPackets.Dequeue();
 
             InsertPacketData(Sequence).acked = false;
 
             outGoingPacket.Sequence = Sequence;
-            outGoingPacket.Ack = mostRecentPacket.Ack;
+            outGoingPacket.Ack = Ack;
             outGoingPacket.AckBits = AckBits;
 
-            // Send the packet and increment the send packet sequence number
+            byte[] packet = outGoingPacket.Pack();
+
+            Socket.Send(packet, packet.Length, receiver);
 
             Sequence++;
         }
 
-        void Receive()
+        public void Receive(IPEndPoint sender)
         {
-            Packet mostRecentPacket = new Packet();
-            Packet receivedPacket = new Packet();
+            if (Socket.Available <= 0) return;
 
-            if (Sequence > mostRecentPacket.Sequence)
-                mostRecentPacket.Sequence = Sequence;
+            byte[] buffer = Socket.Receive(ref sender);
 
-            InsertPacketData(receivedPacket.Sequence);
+            Packet receivedPacket = Packet.Unpack(buffer);
+            if (receivedPacket == null) return;
 
-            for (int i = 0; i < packetDatas.Length; i++)
-                if (!packetDatas[i].acked)
-                    packetDatas[i].acked = true;
+            //if (receivedPacket.Sequence > Ack)
+            //    Ack = receivedPacket.Sequence;
+
+            //InsertPacketData(receivedPacket.Sequence);
+
+            //for (int i = 0; i < packetDatas.Length; i++)
+            //{
+            //    if (!packetDatas[i].acked)
+            //        packetDatas[i].acked = true;
+            //    AckBits |= Convert.ToUInt32(packetDatas[i].acked) << i;
+            //}
+
+            InComingPackets.Enqueue(receivedPacket);
         }
     }
 
     public class Packet
     {
+        public static Packet Empty { get { return new Packet(); } }
         public const int mtuLimit = 1408;
         public ushort Sequence { get; set; }
         public ushort Ack { get; set; }
         public uint AckBits { get; set; }
-        public List<byte> Data { get; set; }
-        public List<Rpc> Messages { get; set; }
+        public List<byte> Data { get; set; } = new List<byte>();
+        public List<Command> Messages { get; set; } = new List<Command>();
 
         public byte[] Pack()
         {
@@ -86,6 +108,7 @@ namespace LarsenNetworking
             {
                 writer.Write(Sequence);
                 writer.Write(Ack);
+                writer.Write(AckBits);
 
                 if (Data != null)
                     writer.Write(Data.ToArray());
@@ -101,93 +124,130 @@ namespace LarsenNetworking
             {
                 try
                 {
-                    Packet p = new Packet();
+                    Packet p = new Packet
+                    {
+                        Sequence = reader.ReadUInt16(),
+                        Ack = reader.ReadUInt16(),
+                        AckBits = reader.ReadUInt32()
+                    };
 
-                    p.Sequence = reader.ReadUInt16();
-                    p.Ack = reader.ReadUInt16();
-
-                    while (stream.Length > 0)
+                    while (stream.Position != stream.Length)
                     {
                         int messageId = reader.ReadInt32();
 
-                        Rpc rpc = Rpc.list[messageId];
+                        Command command = Command.List[messageId];
 
-                        Type[] types = rpc.GetParameters();
+                        for (int i = 0; i < command.Fields.Length; i++)
+                            command.Fields[i].SetValue(command.Fields[i], reader.Read(command.Fields[i].FieldType));
+                            //command.Fields.SetValue(reader.Read(command.Fields[i].FieldType), i);
+                        //command.Values[i] = reader.Read(command.Fields[i].FieldType);
 
-                        for (int i = 0; i < types.Length; i++)
-                            rpc.Values[i] = reader.Read(types[i]);
-
-                        p.Messages.Add(rpc);
+                        p.Messages.Add(command);
                     }
 
                     return p;
                 }
-                catch
+                catch (Exception e)
                 {
                     return null;
                 }
             }
         }
 
-        //public void WriteCommand(Command command)
+        //public static Packet Unpack(byte[] packet)
         //{
-        //    using (var stream = new MemoryStream())
-        //    using (var writer = new BinaryWriter(stream))
+        //    using (var stream = new MemoryStream(packet))
+        //    using (var reader = new BinaryReader(stream))
         //    {
-        //        writer.Write(command.Id);
-
-        //        for (int i = 0; i < values.Length; i++)
+        //        try
         //        {
-        //            writer.Write((dynamic)values[i]);
+        //            Packet p = new Packet();
 
-        //            for (int a = 0; a < stream.Length; a++)
-        //                Data.Add(stream.ToArray()[a]);
+        //            p.Sequence = reader.ReadUInt16();
+        //            p.Ack = reader.ReadUInt16();
+
+        //            while (stream.Length > 0)
+        //            {
+        //                int messageId = reader.ReadInt32();
+
+        //                Rpc rpc = Rpc.list[messageId];
+
+        //                Type[] types = rpc.GetParameters();
+
+        //                for (int i = 0; i < types.Length; i++)
+        //                    rpc.Values[i] = reader.Read(types[i]);
+
+        //                p.Messages.Add(rpc);
+        //            }
+
+        //            return p;
+        //        }
+        //        catch
+        //        {
+        //            return null;
         //        }
         //    }
         //}
 
-        public void WriteRpc(Enum rpcName, object[] values)
+        public void WriteCommand(Command command)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
-                writer.Write(Rpc.lookup[rpcName]);
+                writer.Write(command.Id);
 
-                for (int i = 0; i < values.Length; i++)
+                for (int i = 0; i < command.Values.Length; i++)
                 {
-                    writer.Write((dynamic)values[i]);
+                    writer.Write((dynamic)command.Values[i]);
 
                     for (int a = 0; a < stream.Length; a++)
                         Data.Add(stream.ToArray()[a]);
                 }
             }
         }
-    } 
+
+        //    public void WriteRpc(Enum rpcName, object[] values)
+        //    {
+        //        using (var stream = new MemoryStream())
+        //        using (var writer = new BinaryWriter(stream))
+        //        {
+        //            writer.Write(Rpc.lookup[rpcName]);
+
+        //            for (int i = 0; i < values.Length; i++)
+        //            {
+        //                writer.Write((dynamic)values[i]);
+
+        //                for (int a = 0; a < stream.Length; a++)
+        //                    Data.Add(stream.ToArray()[a]);
+        //            }
+        //        }
+        //    }
+    }
 }
 
 namespace System.IO
 {
     public static class BinaryReaderExtensions
     {
-        public static object Read(this BinaryReader reader, object type)
+        public static object Read(this BinaryReader reader, Type type)
         {
-            switch (type)
+            switch (type.Name)
             {
-                case string _:
+                case "String":
                     return reader.ReadString();
-                case long _:
+                case "Int64":
                     return reader.ReadInt64();
-                case ulong _:
+                case "UInt64":
                     return reader.ReadUInt64();
-                case int _:
+                case "Int32":
                     return reader.ReadInt32();
-                case uint _:
+                case "UInt32":
                     return reader.ReadUInt32();
-                case short _:
+                case "Int16":
                     return reader.ReadInt16();
-                case ushort _:
+                case "UInt16":
                     return reader.ReadUInt16();
-                case byte _:
+                case "Byte":
                     return reader.ReadByte();
 
                 default:

@@ -7,75 +7,36 @@ namespace LarsenNetworking
 {
     public class Client : Networker
     {
-        public IPEndPoint ServerIp { get; set; }
         public void Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
         {
-            ServerIp = new IPEndPoint(IPAddress.Parse(host), port);
-            PacketHandler packetHandler = new PacketHandler();
-            EndPoint sender = ServerIp;
-            byte[] buffer = new byte[1500];
+            PeerIp = ResolveHost(host, port);
+            Socket.Client.Bind(Ip);
 
-            var packet = new Packet();
-            //packet.WriteMessage(1, new[] { CONNECT_MESSAGE });
+            PacketHandler packetHandler = new PacketHandler(Socket);
 
-            while (true)
+            Command.Register(new IMessage[] { new PrintMessage("") });            
+            int id = 0;
+
+            while (IsBound)
             {
-                Socket.SendTo(packet.Pack(), ServerIp);
-
-                Thread.Sleep(1000);
-
-                int dataSize = Socket.ReceiveFrom(buffer, ref sender);
-
-                if (dataSize > 0)
-                {
-
-                }
-
-            }
-        }
-
-        private void Routine()
-        {
-            while (true)
-            {
-                EndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-                DateTime lastLoop = DateTime.Now;
-                byte[] buffer = new byte[6000];
-                NetPlayer currentPlayer;
-                Packet packet;
+                Packet packet = new Packet();
+                packet.WriteCommand(new Command(new PrintMessage(id.ToString())));
+                packetHandler.OutGoingPackets.Enqueue(packet);
+                id++;
 
                 try
                 {
-                    if (Socket.Available > 0)
-                    {
-                        int dataSize = Socket.ReceiveFrom(buffer, ref sender);
-
-                        //packet = Packet.Unpack(buffer);
-                        Console.WriteLine(sender);
-
-                        if (Players.ContainsKey(sender))
-                        {
-                            currentPlayer = Players[sender];
-
-                        }
-                        else
-                        {
-                            //Packet.Unpack(data.data)
-                        }
-
-                    }
+                    packetHandler.Receive(PeerIp);
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
 
                 try
                 {
-                    Time.TimeStep++;
-
-                    //byte[] packetToSend = Packet.Pack(new Packet { ack = true, rpc = 50, frame = 100 });
-
-                    //Socket.SendTo(packetToSend, ServerIp);
+                    packetHandler.Send(PeerIp);
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
+
+                Console.Read();
             }
         }
 

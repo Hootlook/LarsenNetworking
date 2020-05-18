@@ -90,13 +90,31 @@ namespace LarsenNetworking
         public static Queue<Command> toSendOrdered = new Queue<Command>();
         public IMessage Message { get; set; }
         public int Id { get; private set; }
-        private FieldInfo[] Fields { get; set; }
+        public FieldInfo[] Fields { get; set; }
+        public object[] Values { get; set; }
 
-        public Command(IMessage message, int id, FieldInfo[] fields)
+        private Command(IMessage message, int id, FieldInfo[] fields)
         {
             Message = message;
             Fields = fields;
             Id = id;
+
+            Values = new object[Fields.Length];
+        }
+        public Command(IMessage message)
+        {
+            Command command = List[Lookup[message.GetType()]];
+
+            Fields = command.Fields;
+            Id = command.Id;
+            
+            Message = message;
+
+            Values = new object[Fields.Length];
+            
+            for (int i = 0; i < Fields.Length; i++)
+                Values[i] = Fields[i].GetValue(Message);
+
         }
 
         //public static void Initialize()
@@ -149,6 +167,19 @@ namespace LarsenNetworking
                 default:
                     break;
             }
+        }
+    }
+
+    public class PrintMessage : IMessage
+    {
+        public string message;
+        public PrintMessage(string message)
+        {
+            this.message = message;
+        }
+        public void Execute()
+        {
+            Console.WriteLine(message);
         }
     }
 
