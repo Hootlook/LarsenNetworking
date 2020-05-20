@@ -93,7 +93,8 @@ namespace LarsenNetworking
 
     public class Packet
     {
-        public static Packet Empty { get { return new Packet(); } }
+        public static readonly Packet Empty = new Packet();
+
         public const int mtuLimit = 1408;
         public ushort Sequence { get; set; }
         public ushort Ack { get; set; }
@@ -126,8 +127,8 @@ namespace LarsenNetworking
                 {
                     Packet p = new Packet
                     {
-                        Sequence = reader.ReadUInt16(),
                         Ack = reader.ReadUInt16(),
+                        Sequence = reader.ReadUInt16(),
                         AckBits = reader.ReadUInt32()
                     };
 
@@ -138,16 +139,14 @@ namespace LarsenNetworking
                         Command command = Command.List[messageId];
 
                         for (int i = 0; i < command.Fields.Length; i++)
-                            command.Fields[i].SetValue(command.Fields[i], reader.Read(command.Fields[i].FieldType));
-                            //command.Fields.SetValue(reader.Read(command.Fields[i].FieldType), i);
-                        //command.Values[i] = reader.Read(command.Fields[i].FieldType);
+                            command.Fields[i].SetValue(command.Message, reader.Read(command.Fields[i].FieldType));
 
                         p.Messages.Add(command);
                     }
 
                     return p;
                 }
-                catch (Exception e)
+                catch
                 {
                     return null;
                 }

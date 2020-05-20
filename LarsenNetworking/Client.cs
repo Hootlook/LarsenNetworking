@@ -19,7 +19,7 @@ namespace LarsenNetworking
 
             while (IsBound)
             {
-                Packet packet = new Packet();
+                Packet packet = Packet.Empty;
                 packet.WriteCommand(new Command(new PrintMessage(id.ToString())));
                 packetHandler.OutGoingPackets.Enqueue(packet);
                 id++;

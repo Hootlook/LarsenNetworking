@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Reflection;
 
 namespace LarsenNetworking.Tests
 {
@@ -55,10 +56,7 @@ namespace LarsenNetworking.Tests
             Command command = new Command(new PrintMessage("PING"));
             string changedValue = "PONG";
 
-            command.Fields[0].SetValue(command, changedValue);
-
-
-            Assert.Fail();
+            command.Fields[0].SetValue(command.Message, changedValue);
         }
 
         [TestMethod()]
