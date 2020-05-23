@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LarsenNetworking
@@ -34,21 +35,37 @@ namespace LarsenNetworking
             PacketHandler packetHandler = new PacketHandler(Socket);
             IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
 
-            Command.Register(new IMessage[] { new PrintMessage("") });
-            Command command = new Command(new PrintMessage("OK"));
+            Command.Register(new IMessage[] { new PrintMessage("none", "none", "none") });
 
             while (IsBound)
             {
-                //Packet packet = Packet.Empty;
-                //packet.WriteCommand(command);
-                //packetHandler.OutGoingPackets.Enqueue(packet);
+                Packet packet = Packet.Empty;
+
+                packet.WriteCommand(new Command(new PrintMessage(
+                    packetHandler.Ack.ToString(),
+                    packetHandler.Sequence.ToString(),
+                    packetHandler.AckBits.ToString())));
+
+                packetHandler.OutGoingPackets.Enqueue(packet);
+
+                Thread.Sleep(500);
 
                 try
                 {
                     packetHandler.Receive(sender);
 
+                    Console.WriteLine("//////////////////// LOCAL //////////////////////");
+                    Console.WriteLine(
+                        $"Sequence : {packetHandler.Sequence}\n" +
+                        $"Ack : {packetHandler.Ack}\n" +
+                        $"AckBits : {packetHandler.AckBits}"
+                        );
+                    Console.WriteLine("////////////////////////////////////////////////");
+
                     if (packetHandler.InComingPackets.Count != 0)
                         packetHandler.InComingPackets.Dequeue().Messages[0].Message.Execute();
+
+                    Console.SetCursorPosition(0, 1);
 
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
@@ -82,7 +99,5 @@ namespace LarsenNetworking
         {
             throw new NotImplementedException();
         }
-
-        
     }
 }

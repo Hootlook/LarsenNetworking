@@ -14,10 +14,12 @@ namespace LarsenNetworking
         {
             Socket = socket;
         }
-        public class PacketData
+
+        public struct PacketData
         {
             public bool acked;
         }
+
         const int BUFFER_SIZE = 1024;
         public UdpClient Socket { get; set; }
         public Queue<Packet> OutGoingPackets { get; set; } = new Queue<Packet>();
@@ -30,21 +32,34 @@ namespace LarsenNetworking
 
         private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
 
-        public PacketData GetPacketData(uint sequence)
-        {
-            uint index = sequence % BUFFER_SIZE;
-            if (sequenceBuffer[index] == sequence)
-                return packetDatas[index];
-            else
-                return null;
-        }
-
         public ref PacketData InsertPacketData(uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
             sequenceBuffer[index] = sequence;
-            packetDatas[index] = new PacketData();
             return ref packetDatas[index];
+        }
+
+        public bool PacketDataExist(uint sequence)
+        {
+            uint index = sequence % BUFFER_SIZE;
+            if (sequenceBuffer[index] == sequence)
+                return true;
+            else
+                return false;
+        }
+
+        public void GenerateAckBits()
+        {
+            AckBits = 0;
+            uint mask = 1;
+
+            for (int i = 0; i < packetDatas.Length; ++i)
+            {
+                uint sequence = Ack - ((uint)i);
+                if (PacketDataExist(sequence))
+                    AckBits |= mask;
+                mask <<= 1;
+            }
         }
 
         public void Send(IPEndPoint receiver)
@@ -53,7 +68,9 @@ namespace LarsenNetworking
 
             Packet outGoingPacket = OutGoingPackets.Dequeue();
 
-            InsertPacketData(Sequence).acked = false;
+            InsertPacketData(Sequence).acked = true;
+
+            GenerateAckBits();
 
             outGoingPacket.Sequence = Sequence;
             outGoingPacket.Ack = Ack;
@@ -75,25 +92,22 @@ namespace LarsenNetworking
             Packet receivedPacket = Packet.Unpack(buffer);
             if (receivedPacket == null) return;
 
-            //if (receivedPacket.Sequence > Ack)
-            //    Ack = receivedPacket.Sequence;
+            if (Sequence > receivedPacket.Ack)
+                Ack = receivedPacket.Ack;
 
-            //InsertPacketData(receivedPacket.Sequence);
+            InsertPacketData(receivedPacket.Sequence);
 
-            //for (int i = 0; i < packetDatas.Length; i++)
-            //{
-            //    if (!packetDatas[i].acked)
-            //        packetDatas[i].acked = true;
-            //    AckBits |= Convert.ToUInt32(packetDatas[i].acked) << i;
-            //}
-
+            for (int i = 0; i < packetDatas.Length; i++)
+                if (!packetDatas[i].acked)
+                    packetDatas[i].acked = true;
+            
             InComingPackets.Enqueue(receivedPacket);
         }
     }
 
     public class Packet
     {
-        public static readonly Packet Empty = new Packet();
+        public static Packet Empty { get { return new Packet(); } }
 
         public const int mtuLimit = 1408;
         public ushort Sequence { get; set; }
@@ -146,47 +160,13 @@ namespace LarsenNetworking
 
                     return p;
                 }
-                catch
+                catch (Exception e)
                 {
+                    Console.WriteLine("/!\\ Malformed packet /!\\ : " + e.Message);
                     return null;
                 }
             }
         }
-
-        //public static Packet Unpack(byte[] packet)
-        //{
-        //    using (var stream = new MemoryStream(packet))
-        //    using (var reader = new BinaryReader(stream))
-        //    {
-        //        try
-        //        {
-        //            Packet p = new Packet();
-
-        //            p.Sequence = reader.ReadUInt16();
-        //            p.Ack = reader.ReadUInt16();
-
-        //            while (stream.Length > 0)
-        //            {
-        //                int messageId = reader.ReadInt32();
-
-        //                Rpc rpc = Rpc.list[messageId];
-
-        //                Type[] types = rpc.GetParameters();
-
-        //                for (int i = 0; i < types.Length; i++)
-        //                    rpc.Values[i] = reader.Read(types[i]);
-
-        //                p.Messages.Add(rpc);
-        //            }
-
-        //            return p;
-        //        }
-        //        catch
-        //        {
-        //            return null;
-        //        }
-        //    }
-        //}
 
         public void WriteCommand(Command command)
         {
@@ -195,32 +175,15 @@ namespace LarsenNetworking
             {
                 writer.Write(command.Id);
 
-                for (int i = 0; i < command.Values.Length; i++)
+                for (int i = 0; i < command.Fields.Length; i++)
                 {
-                    writer.Write((dynamic)command.Values[i]);
+                    writer.Write((dynamic)command.Fields[i].GetValue(command.Message));
 
                     for (int a = 0; a < stream.Length; a++)
                         Data.Add(stream.ToArray()[a]);
                 }
             }
         }
-
-        //    public void WriteRpc(Enum rpcName, object[] values)
-        //    {
-        //        using (var stream = new MemoryStream())
-        //        using (var writer = new BinaryWriter(stream))
-        //        {
-        //            writer.Write(Rpc.lookup[rpcName]);
-
-        //            for (int i = 0; i < values.Length; i++)
-        //            {
-        //                writer.Write((dynamic)values[i]);
-
-        //                for (int a = 0; a < stream.Length; a++)
-        //                    Data.Add(stream.ToArray()[a]);
-        //            }
-        //        }
-        //    }
     }
 }
 
@@ -254,33 +217,4 @@ namespace System.IO
             }
         }
     }
-
-    //public static class BinaryWriterExtensions
-    //{
-    //    public static object Read(this BinaryWriter writer, object type)
-    //    {
-    //        switch (type)
-    //        {
-    //            case string _:
-    //                return writer.Write(type as st);
-    //            case long _:
-    //                return writer.Write();
-    //            case ulong _:
-    //                return writer.Write();
-    //            case int _:
-    //                return writer.Write();
-    //            case uint _:
-    //                return writer.Write();
-    //            case short _:
-    //                return writer.Write();
-    //            case ushort _:
-    //                return writer.Write();
-    //            case byte _:
-    //                return writer.Write();
-
-    //            default:
-    //                return null;
-    //        }
-    //    }
-    //}
 }

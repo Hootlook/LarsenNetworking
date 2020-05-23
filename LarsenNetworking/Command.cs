@@ -12,70 +12,6 @@ namespace LarsenNetworking
         Ordered
     }
 
-    //public abstract class Command
-    //{
-    //    public static List<Command> List { get; set; }
-    //    public static Dictionary<Type, int> Lookup { get; set; }
-    //    public static Queue<Command> toSendUnreliably = new Queue<Command>();
-    //    public static Queue<Command> toSendReliably = new Queue<Command>();
-    //    public static Queue<Command> toSendOrdered = new Queue<Command>();
-    //    public int Id { get; protected set; }
-    //    private FieldInfo[] Fields { get; set; }
-
-    //    protected abstract void Action();
-
-    //    public static void Initialize()
-    //    {
-    //        //List = AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes())
-    //        //    .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Command)))
-    //        //    .Select(t => (Command)Activator.CreateInstance(t)).ToList();
-
-    //        Lookup = new Dictionary<Type, int>();
-    //        List = new List<Command>();
-
-    //        foreach (Type type in
-    //                AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes())
-    //                .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Command))))
-    //        {
-    //            Command command = (Command)Activator.CreateInstance(type);
-    //            command.Fields = type.GetFields();
-    //            Lookup.Add(type, List.Count);
-    //            List.Add(command);
-    //        }
-    //    }
-
-    //    public void Send(Method sending)
-    //    {
-    //        Id = Lookup[GetType()];
-
-    //        switch (sending)
-    //        {
-    //            case Method.Reliable:
-    //                lock (toSendReliably)
-    //                    toSendReliably.Enqueue(this);
-    //                break;
-    //            case Method.Ordered:
-    //                lock (toSendOrdered)
-    //                    toSendOrdered.Enqueue(this);
-    //                break;
-    //            case Method.Unreliable:
-    //                lock (toSendUnreliably)
-    //                    toSendUnreliably.Enqueue(this);
-    //                break;
-    //            default:
-    //                break;
-    //        }
-    //    }
-    //}
-
-    //public class PlayerMove : Command
-    //{
-    //    protected override void Action()
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-    //}
-
     public interface IMessage
     {
         void Execute();
@@ -91,16 +27,14 @@ namespace LarsenNetworking
         public IMessage Message { get; set; }
         public int Id { get; private set; }
         public FieldInfo[] Fields { get; set; }
-        public object[] Values { get; set; }
 
         private Command(IMessage message, int id, FieldInfo[] fields)
         {
             Message = message;
             Fields = fields;
             Id = id;
-
-            Values = new object[Fields.Length];
         }
+
         public Command(IMessage message)
         {
             Command command = List[Lookup[message.GetType()]];
@@ -109,12 +43,6 @@ namespace LarsenNetworking
             Id = command.Id;
             
             Message = message;
-
-            Values = new object[Fields.Length];
-            
-            for (int i = 0; i < Fields.Length; i++)
-                Values[i] = Fields[i].GetValue(Message);
-
         }
 
         //public static void Initialize()
@@ -170,16 +98,40 @@ namespace LarsenNetworking
         }
     }
 
+    //public class PrintMessage : IMessage
+    //{
+    //    public string message;
+    //    public PrintMessage(string message)
+    //    {
+    //        this.message = message;
+    //    }
+    //    public void Execute()
+    //    {
+    //        Console.WriteLine(message);
+    //    }
+    //}
+
     public class PrintMessage : IMessage
     {
-        public string message;
-        public PrintMessage(string message)
+        public string sequence;
+        public string ack;
+        public string ackBits;
+
+        public PrintMessage(string sequence, string ack, string ackBits)
         {
-            this.message = message;
+            this.sequence = sequence;
+            this.ack = ack;
+            this.ackBits = ackBits;
         }
         public void Execute()
         {
-            Console.WriteLine(message);
+            Console.WriteLine("//////////////////// REMOTE //////////////////////");
+            Console.WriteLine(
+                $"Sequence : {sequence}\n" +
+                $"Ack : {ack}\n" +
+                $"AckBits : {ackBits}\n"
+                );
+            Console.WriteLine("////////////////////////////////////////////////");
         }
     }
 
