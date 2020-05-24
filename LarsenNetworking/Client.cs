@@ -25,19 +25,19 @@ namespace LarsenNetworking
             }
         }
 
-        void Routine()
+        private void Routine()
         {
             PacketHandler packetHandler = new PacketHandler(Socket);
 
-            Command.Register(new IMessage[] { new PrintMessage("none", "none", "none") });
+            Command.Register(new IMessage[] { new PrintMessage("", "", "") });
 
             while (IsBound)
             {
                 Packet packet = Packet.Empty;
 
                 packet.WriteCommand(new Command(new PrintMessage(
-                    packetHandler.Ack.ToString(), 
-                    packetHandler.Sequence.ToString(), 
+                    packetHandler.Ack.ToString(),
+                    packetHandler.Sequence.ToString(),
                     packetHandler.AckBits.ToString())));
 
                 packetHandler.OutGoingPackets.Enqueue(packet);
@@ -48,18 +48,18 @@ namespace LarsenNetworking
                 {
                     packetHandler.Receive(PeerIp);
 
-                    Console.WriteLine("//////////////////// LOCAL //////////////////////");
                     Console.WriteLine(
+                        $"//////////////////// LOCAL //////////////////////\n" + 
                         $"Sequence : {packetHandler.Sequence}\n" +
                         $"Ack : {packetHandler.Ack}\n" +
-                        $"AckBits : {packetHandler.AckBits}"
+                        $"AckBits : {packetHandler.AckBits}\n" + 
+                        $"/////////////////////////////////////////////////\n"
                         );
-                    Console.WriteLine("////////////////////////////////////////////////");
 
                     if (packetHandler.InComingPackets.Count != 0)
                         packetHandler.InComingPackets.Dequeue().Messages[0].Message.Execute();
 
-                    Console.SetCursorPosition(0, 1);
+                    Console.SetCursorPosition(0, 2);
 
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }

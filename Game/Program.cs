@@ -47,12 +47,12 @@ namespace Game
                 if (entity.IsServer)
                 {
                     ((Server)entity).Run();
-                    Utils.SlowWrite("Server Started !");
+                    Utils.SlowWrite("Server Started !\n");
                 }
                 else
                 {
                     ((Client)entity).Connect();
-                    Utils.SlowWrite("Client Started !");
+                    Utils.SlowWrite("Client Started !\n");
                 }
             }
             catch (Exception e)

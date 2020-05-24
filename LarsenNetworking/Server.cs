@@ -35,7 +35,7 @@ namespace LarsenNetworking
             PacketHandler packetHandler = new PacketHandler(Socket);
             IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
 
-            Command.Register(new IMessage[] { new PrintMessage("none", "none", "none") });
+            Command.Register(new IMessage[] { new PrintMessage("", "", "") });
 
             while (IsBound)
             {
@@ -54,18 +54,18 @@ namespace LarsenNetworking
                 {
                     packetHandler.Receive(sender);
 
-                    Console.WriteLine("//////////////////// LOCAL //////////////////////");
                     Console.WriteLine(
+                        $"//////////////////// LOCAL //////////////////////\n" +
                         $"Sequence : {packetHandler.Sequence}\n" +
                         $"Ack : {packetHandler.Ack}\n" +
-                        $"AckBits : {packetHandler.AckBits}"
+                        $"AckBits : {packetHandler.AckBits}\n" +
+                        $"/////////////////////////////////////////////////\n"
                         );
-                    Console.WriteLine("////////////////////////////////////////////////");
 
                     if (packetHandler.InComingPackets.Count != 0)
                         packetHandler.InComingPackets.Dequeue().Messages[0].Message.Execute();
 
-                    Console.SetCursorPosition(0, 1);
+                    Console.SetCursorPosition(0, 2);
 
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }

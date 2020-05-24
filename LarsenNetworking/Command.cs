@@ -125,13 +125,13 @@ namespace LarsenNetworking
         }
         public void Execute()
         {
-            Console.WriteLine("//////////////////// REMOTE //////////////////////");
             Console.WriteLine(
+                $"//////////////////// REMOTE //////////////////////\n" +
                 $"Sequence : {sequence}\n" +
                 $"Ack : {ack}\n" +
-                $"AckBits : {ackBits}\n"
+                $"AckBits : {ackBits}\n" +
+                $"//////////////////////////////////////////////////"
                 );
-            Console.WriteLine("////////////////////////////////////////////////");
         }
     }
 
