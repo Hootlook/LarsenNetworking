@@ -41,8 +41,8 @@ namespace LarsenNetworking
                 {
                     Packet p = new Packet
                     {
-                        Ack = reader.ReadUInt16(),
                         Sequence = reader.ReadUInt16(),
+                        Ack = reader.ReadUInt16(),
                         AckBits = reader.ReadUInt32()
                     };
 

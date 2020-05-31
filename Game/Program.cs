@@ -60,7 +60,10 @@ namespace Game
                 Console.WriteLine(e);
             }
 
-            Console.Read();
+            while (true)
+            {
+
+            }
         }
     }
 }

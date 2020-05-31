@@ -29,20 +29,20 @@ namespace LarsenNetworking
         {
             PacketHandler packetHandler = new PacketHandler(Socket);
 
-            Command.Register(new IMessage[] { new PrintMessage("", "", "") });
+            Command.Register(new IMessage[] { new PrintMessage(0, 0, 0) });
 
             while (IsBound)
             {
                 Packet packet = Packet.Empty;
 
                 packet.WriteCommand(new Command(new PrintMessage(
-                    packetHandler.Ack.ToString(),
-                    packetHandler.Sequence.ToString(),
-                    packetHandler.AckBits.ToString())));
+                    packetHandler.Ack,
+                    packetHandler.Sequence,
+                    packetHandler.AckBits)));
 
                 packetHandler.OutGoingPackets.Enqueue(packet);
 
-                Thread.Sleep(500);
+                Thread.Sleep(RunSpeed);
 
                 try
                 {
@@ -52,7 +52,10 @@ namespace LarsenNetworking
                         $"//////////////////// LOCAL //////////////////////\n" + 
                         $"Sequence : {packetHandler.Sequence}\n" +
                         $"Ack : {packetHandler.Ack}\n" +
-                        $"AckBits : {packetHandler.AckBits}\n" + 
+                        $"AckBits : {Convert.ToString(packetHandler.AckBits, 2).PadLeft(PacketHandler.BUFFER_SIZE, '0')}\n" +
+                        $"CurrentBit : {packetHandler.Ack % PacketHandler.BUFFER_SIZE}\n" +
+                        $"PacketAvailable : {packetHandler.Socket.Available}\n" +
+                        $"RunningSpeed : {RunSpeed}ms\n" +
                         $"/////////////////////////////////////////////////\n"
                         );
 
@@ -66,9 +69,28 @@ namespace LarsenNetworking
 
                 try
                 {
-                    packetHandler.Send(PeerIp);
+                    bool random = new Random().Next(6) == 0;
+                    packetHandler.Send(PeerIp, random);
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
+
+                if (Console.KeyAvailable)
+                {
+                    ConsoleKeyInfo key = Console.ReadKey(true);
+
+                    switch (key.Key)
+                    {
+                        case ConsoleKey.Add:
+                            RunSpeed += 10;
+                            break;
+                        case ConsoleKey.Subtract:
+                            RunSpeed -= 10;
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
             }
         }
 

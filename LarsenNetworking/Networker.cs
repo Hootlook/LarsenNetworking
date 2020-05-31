@@ -27,6 +27,7 @@ namespace LarsenNetworking
 		public State CurrentState { get; set; }
 		public IPEndPoint PeerIp { get; set; }
 		public IPEndPoint Ip { get; set; }
+		public int RunSpeed { get; set; } = 100;
 		public bool IsServer { get { return this is Server; } }
 		public Time Time { get; set; }
 		public uint MaxPlayers { get; set; }

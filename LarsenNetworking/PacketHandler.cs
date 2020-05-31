@@ -6,17 +6,14 @@ namespace LarsenNetworking
 {
     public class PacketHandler
     {
-        public PacketHandler(UdpClient socket)
-        {
-            Socket = socket;
-        }
+        public PacketHandler(UdpClient socket) => Socket = socket;
 
         public struct PacketData
         {
             public bool acked;
         }
 
-        const int BUFFER_SIZE = 1024;
+        public const int BUFFER_SIZE = 32;
         public UdpClient Socket { get; set; }
         public Queue<Packet> OutGoingPackets { get; set; } = new Queue<Packet>();
         public Queue<Packet> InComingPackets { get; set; } = new Queue<Packet>();
@@ -24,24 +21,22 @@ namespace LarsenNetworking
         public ushort Ack { get; set; }
         public uint AckBits { get; set; }
 
-        private uint[] sequenceBuffer = new uint[BUFFER_SIZE];
-
-        private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
-
-        public ref PacketData InsertPacketData(uint sequence)
+        private uint[] localSequenceBuffer = new uint[BUFFER_SIZE];
+        private PacketData[] localPacketDatas = new PacketData[BUFFER_SIZE];
+        public ref PacketData LocalInsertPacketData(uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
-            sequenceBuffer[index] = sequence;
-            return ref packetDatas[index];
+            localSequenceBuffer[index] = sequence;
+            return ref localPacketDatas[index];
         }
 
-        public bool PacketDataExist(uint sequence)
+        private uint[] remoteSequenceBuffer = new uint[BUFFER_SIZE];
+        private PacketData[] remotePacketDatas = new PacketData[BUFFER_SIZE];
+        public ref PacketData RemoteInsertPacketData(uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
-            if (sequenceBuffer[index] == sequence)
-                return true;
-            else
-                return false;
+            remoteSequenceBuffer[index] = sequence;
+            return ref remotePacketDatas[index];
         }
 
         public void GenerateAckBits()
@@ -49,22 +44,21 @@ namespace LarsenNetworking
             AckBits = 0;
             uint mask = 1;
 
-            for (int i = 0; i < packetDatas.Length; ++i)
+            for (int i = 0; i < remotePacketDatas.Length; ++i)
             {
-                uint sequence = Ack - ((uint)i);
-                if (PacketDataExist(sequence))
+                if (remotePacketDatas[i].acked == true)
                     AckBits |= mask;
                 mask <<= 1;
             }
         }
 
-        public void Send(IPEndPoint receiver)
+        public void Send(IPEndPoint receiver, bool fakeSend = false)
         {
             if (OutGoingPackets.Count <= 0) return;
 
             Packet outGoingPacket = OutGoingPackets.Dequeue();
 
-            InsertPacketData(Sequence).acked = true;
+            LocalInsertPacketData(Sequence).acked = false;
 
             GenerateAckBits();
 
@@ -74,7 +68,8 @@ namespace LarsenNetworking
 
             byte[] packet = outGoingPacket.Pack();
 
-            Socket.Send(packet, packet.Length, receiver);
+            if (!fakeSend)
+                Socket.Send(packet, packet.Length, receiver);
 
             Sequence++;
         }
@@ -88,15 +83,13 @@ namespace LarsenNetworking
             Packet receivedPacket = Packet.Unpack(buffer);
             if (receivedPacket == null) return;
 
-            if (Sequence > receivedPacket.Ack)
-                Ack = receivedPacket.Ack;
+            if (receivedPacket.Sequence > Ack)
+                Ack = receivedPacket.Sequence;
 
-            InsertPacketData(receivedPacket.Sequence);
+            RemoteInsertPacketData(receivedPacket.Sequence).acked = true;
 
-            for (int i = 0; i < packetDatas.Length; i++)
-                if (!packetDatas[i].acked)
-                    packetDatas[i].acked = true;
-            
+            LocalInsertPacketData(receivedPacket.Ack).acked = true;
+
             InComingPackets.Enqueue(receivedPacket);
         }
     }

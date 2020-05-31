@@ -98,26 +98,13 @@ namespace LarsenNetworking
         }
     }
 
-    //public class PrintMessage : IMessage
-    //{
-    //    public string message;
-    //    public PrintMessage(string message)
-    //    {
-    //        this.message = message;
-    //    }
-    //    public void Execute()
-    //    {
-    //        Console.WriteLine(message);
-    //    }
-    //}
-
     public class PrintMessage : IMessage
     {
-        public string sequence;
-        public string ack;
-        public string ackBits;
+        public ushort sequence;
+        public ushort ack;
+        public uint ackBits;
 
-        public PrintMessage(string sequence, string ack, string ackBits)
+        public PrintMessage(ushort sequence, ushort ack, uint ackBits)
         {
             this.sequence = sequence;
             this.ack = ack;
@@ -125,15 +112,33 @@ namespace LarsenNetworking
         }
         public void Execute()
         {
-            Console.WriteLine(
-                $"//////////////////// REMOTE //////////////////////\n" +
-                $"Sequence : {sequence}\n" +
-                $"Ack : {ack}\n" +
-                $"AckBits : {ackBits}\n" +
-                $"//////////////////////////////////////////////////"
-                );
+            Console.WriteLine("");
         }
     }
+
+    //public class PrintMessage : IMessage
+    //{
+    //    public ushort sequence;
+    //    public ushort ack;
+    //    public uint ackBits;
+
+    //    public PrintMessage(ushort sequence, ushort ack, uint ackBits)
+    //    {
+    //        this.sequence = sequence;
+    //        this.ack = ack;
+    //        this.ackBits = ackBits;
+    //    }
+    //    public void Execute()
+    //    {
+    //        Console.WriteLine(
+    //            $"//////////////////// REMOTE //////////////////////\n" +
+    //            $"Sequence : {sequence}\n" +
+    //            $"Ack : {ack}\n" +
+    //            $"AckBits : {Convert.ToString(ackBits, 2).PadLeft(PacketHandler.BUFFER_SIZE, '0')}\n" +
+    //            $"//////////////////////////////////////////////////"
+    //            );
+    //    }
+    //}
 
     public class ConnectMessage : IMessage
     {
@@ -165,37 +170,4 @@ namespace LarsenNetworking
             throw new NotImplementedException();
         }
     }
-
-    //public class MyClass
-    //{
-    //    public static List<MyClass> List { get; set; }
-    //    public static Dictionary<Type, int> Lookup { get; set; }
-    //    public static void Initialize()
-    //    {
-    //        Lookup = new Dictionary<Type, int>();
-    //        List = new List<MyClass>();
-
-    //        foreach (Type type in
-    //                AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes())
-    //                .Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(MyClass))))
-    //        {
-    //            MyClass command = (MyClass)Activator.CreateInstance(type);
-    //            MyClass.ChildA.
-    //            Lookup.Add(type, List.Count);
-    //            List.Add(command);
-    //        }
-    //}
-
-    //public abstract class BaseClass<T> : MyClass where T : class
-    //{
-    //    public static int id;
-    //}
-
-    //public class ChildA : BaseClass<ChildA>
-    //{
-    //}
-
-    //public class ChildB : BaseClass<ChildB>
-    //{
-    //}
 }
