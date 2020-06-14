@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -32,93 +33,60 @@ namespace LarsenNetworking
 
         private void Routine()
         {
-            PacketHandler packetHandler = new PacketHandler(Socket);
-            IPEndPoint sender = new IPEndPoint(IPAddress.Any, 0);
-
-            Command.Register(new IMessage[] { new PrintMessage(0, 0, 0) });
+            IPEndPoint any = new IPEndPoint(IPAddress.Any, 0);
+            IPEndPoint sender;
+            NetPlayer player;
+            Packet packet;
+            byte[] buffer;
 
             while (IsBound)
             {
-                Packet packet = Packet.Empty;
-
-                packet.WriteCommand(new Command(new PrintMessage(
-                    packetHandler.Ack,
-                    packetHandler.Sequence,
-                    packetHandler.AckBits)));
-
-                packetHandler.OutGoingPackets.Enqueue(packet);
-
-                Thread.Sleep(RunSpeed);
+                sender = any;
 
                 try
                 {
-                    packetHandler.Receive(sender);
+                    if (Socket.Available > 0)
+                    {
+                        buffer = Socket.Receive(ref sender);
 
-                    Console.WriteLine(
-                        $"//////////////////// LOCAL //////////////////////\n" +
-                        $"Sequence : {packetHandler.Sequence}\n" +
-                        $"Ack : {packetHandler.Ack}\n" +
-                        $"AckBits : {Convert.ToString(packetHandler.AckBits, 2).PadLeft(PacketHandler.BUFFER_SIZE, '0')}\n" +
-                        $"CurrentBit : {packetHandler.Ack % PacketHandler.BUFFER_SIZE}\n" +
-                        $"PacketAvailable : {packetHandler.Socket.Available}\n" +
-                        $"RunningSpeed : {RunSpeed}ms\n" +
-                        $"/////////////////////////////////////////////////\n" 
-                        );
+                        if (!Players.ContainsKey(sender))
+                            Players.Add(sender, new NetPlayer(sender, Socket));
 
-                    if (packetHandler.InComingPackets.Count != 0)
-                        packetHandler.InComingPackets.Dequeue().Messages[0].Message.Execute();
+                        player = Players[sender];
 
-                    Console.SetCursorPosition(0, 2);
+                        player.Receive(buffer);
 
+                        if (player.InComingPackets.Count != 0)
+                        {
+                            packet = player.InComingPackets.Dequeue();
+                            for (int i = 0; i < packet.Messages.Count; i++)
+                            {
+                                if (packet.Messages[i].Message is Client.ConnectionMessage)
+                                {
+                                    Packet answere = Packet.Empty;
+                                    answere.WriteCommand(new Command(new Client.ConnectionMessage()));
+                                    player.OutGoingPackets.Enqueue(answere);
+                                    player.Send();
+                                }
+                                else
+                                {
+                                    packet.Messages[i].Message.Execute();
+                                }
+                            }
+                        }
+                    }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
 
                 try
                 {
-                    packetHandler.Send(PeerIp);
-                }
-                catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
-
-                if (Console.KeyAvailable)
-                {
-                    ConsoleKeyInfo key = Console.ReadKey(true);
-
-                    switch (key.Key)
+                    foreach (NetPlayer netPlayer in Players.Values)
                     {
-                        case ConsoleKey.Add:
-                            RunSpeed += 10;
-                            break;
-                        case ConsoleKey.Subtract:
-                            RunSpeed -= 10;
-                            break;
-
-                        default:
-                            break;
+                        netPlayer.Send();
                     }
                 }
+                catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
             }
         }        
-
-        private void DisconnectPlayer(EndPoint sender)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void ConnectPlayer(EndPoint sender)
-        {
-            var player = new NetPlayer
-            {
-                Ip = ((IPEndPoint)sender).Address,
-                Name = $"Player {Players.Count + 1}"
-            };
-
-            Players.Add(sender, player);
-            Console.WriteLine($"{player.Name} ({player.Ip}) Joined");
-        }
-
-        protected override void Initialisation()
-        {
-            throw new NotImplementedException();
-        }
     }
 }

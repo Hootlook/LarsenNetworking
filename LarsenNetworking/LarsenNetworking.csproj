@@ -47,7 +47,6 @@
     <Compile Include="Networker.cs" />
     <Compile Include="NetPlayer.cs" />
     <Compile Include="Packet.cs" />
-    <Compile Include="PacketHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rpc.cs" />
     <Compile Include="ThreadManager.cs" />

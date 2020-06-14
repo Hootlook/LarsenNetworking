@@ -9,6 +9,9 @@ using System.Reflection;
 
 namespace LarsenNetworking
 {
+
+	/// Brief description which ends at this dot. Details follow
+	/// here.
 	public abstract class Networker
 	{
 		public const ushort DEFAULT_PORT = 26950;
@@ -24,7 +27,7 @@ namespace LarsenNetworking
 		}
 
 		public bool IsBound { get { return Socket.Client.IsBound; } }
-		public State CurrentState { get; set; }
+		public State CurrentState { get; set; } = State.Disconnected;
 		public IPEndPoint PeerIp { get; set; }
 		public IPEndPoint Ip { get; set; }
 		public int RunSpeed { get; set; } = 100;
@@ -42,8 +45,6 @@ namespace LarsenNetworking
 
 			Socket.Client.IOControl((IOControlCode)SIO_UDP_CONNRESET, new byte[] { 0, 0, 0, 0 }, null);
 		}
-
-		protected abstract void Initialisation();
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{

@@ -74,28 +74,28 @@ namespace LarsenNetworking
             }
         }
 
-        public static void Send(IMessage message, Method sending)
-        {
-            Command command = List[Lookup[message.GetType()]];
+        //public static void Send(IMessage message, Method sending)
+        //{
+        //    Command command = List[Lookup[message.GetType()]];
 
-            switch (sending)
-            {
-                case Method.Reliable:
-                    lock (toSendReliably)
-                        toSendReliably.Enqueue(command);
-                    break;
-                case Method.Ordered:
-                    lock (toSendOrdered)
-                        toSendOrdered.Enqueue(command);
-                    break;
-                case Method.Unreliable:
-                    lock (toSendUnreliably)
-                        toSendUnreliably.Enqueue(command);
-                    break;
-                default:
-                    break;
-            }
-        }
+        //    switch (sending)
+        //    {
+        //        case Method.Reliable:
+        //            lock (toSendReliably)
+        //                toSendReliably.Enqueue(command);
+        //            break;
+        //        case Method.Ordered:
+        //            lock (toSendOrdered)
+        //                toSendOrdered.Enqueue(command);
+        //            break;
+        //        case Method.Unreliable:
+        //            lock (toSendUnreliably)
+        //                toSendUnreliably.Enqueue(command);
+        //            break;
+        //        default:
+        //            break;
+        //    }
+        //}
     }
 
     public class PrintMessage : IMessage
@@ -140,34 +140,34 @@ namespace LarsenNetworking
     //    }
     //}
 
-    public class ConnectMessage : IMessage
-    {
-        public void Execute()
-        {
-            Command.Send(new ChallengeConnectMessage(Networker.CONNECT_MESSAGE), Method.Reliable);
-        }
-    }
+    //public class ConnectMessage : IMessage
+    //{
+    //    public void Execute()
+    //    {
+    //        Command.Send(new ChallengeConnectMessage(Networker.CONNECT_MESSAGE), Method.Reliable);
+    //    }
+    //}
 
-    public class ChallengeConnectMessage : IMessage
-    {
-        public string connectMessage;
+    //public class ChallengeConnectMessage : IMessage
+    //{
+    //    public string connectMessage;
 
-        public ChallengeConnectMessage(string message)
-        {
-            connectMessage = message;
-        }
+    //    public ChallengeConnectMessage(string message)
+    //    {
+    //        connectMessage = message;
+    //    }
 
-        public void Execute()
-        {
-            Command.Send(new CompleteConnectMessage(), Method.Reliable);
-        }
-    }
+    //    public void Execute()
+    //    {
+    //        Command.Send(new CompleteConnectMessage(), Method.Reliable);
+    //    }
+    //}
 
-    public class CompleteConnectMessage : IMessage
-    {
-        public void Execute()
-        {
-            throw new NotImplementedException();
-        }
-    }
+    //public class CompleteConnectMessage : IMessage
+    //{
+    //    public void Execute()
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
 }

@@ -8,10 +8,39 @@ namespace LarsenNetworking
 {
     public class Client : Networker
     {
-        public void Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
+        public NetPlayer server;
+
+        public bool Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
         {
             PeerIp = ResolveHost(host, port);
-            Socket.Client.Bind(Ip);
+
+            server = new NetPlayer(PeerIp, Socket);
+            IPEndPoint serverIp = server.Ip;
+
+            Packet packet = Packet.Empty;
+            packet.WriteCommand(new Command(new ConnectionMessage()));
+
+            byte[] buffer = new byte[0];
+
+            int retry = 0;
+            while (true)
+            {
+                if (Socket.Available > 0)
+                    buffer = Socket.Receive(ref serverIp);
+
+                server.Receive(buffer);
+
+                if (server.InComingPackets.Count > 0)
+                    if (server.InComingPackets.Dequeue().Messages[0].Message is ConnectionMessage)
+                        break;
+
+                Thread.Sleep(1000);
+
+                server.OutGoingPackets.Enqueue(packet);
+                server.Send();
+
+                if (retry++ > 5) return false;
+            }
 
             try
             {
@@ -23,80 +52,50 @@ namespace LarsenNetworking
                 Socket.Dispose();
                 throw;
             }
+
+            return true;
         }
 
         private void Routine()
         {
-            PacketHandler packetHandler = new PacketHandler(Socket);
-
-            Command.Register(new IMessage[] { new PrintMessage(0, 0, 0) });
+            IPEndPoint serverIp = server.Ip;
+            Packet packet;
+            byte[] buffer;
 
             while (IsBound)
             {
-                Packet packet = Packet.Empty;
-
-                packet.WriteCommand(new Command(new PrintMessage(
-                    packetHandler.Ack,
-                    packetHandler.Sequence,
-                    packetHandler.AckBits)));
-
-                packetHandler.OutGoingPackets.Enqueue(packet);
-
-                Thread.Sleep(RunSpeed);
-
                 try
                 {
-                    packetHandler.Receive(PeerIp);
+                    if (Socket.Available > 0)
+                    {
+                        buffer = Socket.Receive(ref serverIp);
 
-                    Console.WriteLine(
-                        $"//////////////////// LOCAL //////////////////////\n" + 
-                        $"Sequence : {packetHandler.Sequence}\n" +
-                        $"Ack : {packetHandler.Ack}\n" +
-                        $"AckBits : {Convert.ToString(packetHandler.AckBits, 2).PadLeft(PacketHandler.BUFFER_SIZE, '0')}\n" +
-                        $"CurrentBit : {packetHandler.Ack % PacketHandler.BUFFER_SIZE}\n" +
-                        $"PacketAvailable : {packetHandler.Socket.Available}\n" +
-                        $"RunningSpeed : {RunSpeed}ms\n" +
-                        $"/////////////////////////////////////////////////\n"
-                        );
+                        server.Receive(buffer);
 
-                    if (packetHandler.InComingPackets.Count != 0)
-                        packetHandler.InComingPackets.Dequeue().Messages[0].Message.Execute();
-
-                    Console.SetCursorPosition(0, 2);
-
+                        if (server.InComingPackets.Count != 0)
+                        {
+                            packet = server.InComingPackets.Dequeue();
+                            for (int i = 0; i < packet.Messages.Count; i++)
+                                packet.Messages[i].Message.Execute();
+                        }
+                    }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
 
                 try
                 {
-                    bool random = new Random().Next(6) == 0;
-                    packetHandler.Send(PeerIp, random);
+                    server.Send();
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
-
-                if (Console.KeyAvailable)
-                {
-                    ConsoleKeyInfo key = Console.ReadKey(true);
-
-                    switch (key.Key)
-                    {
-                        case ConsoleKey.Add:
-                            RunSpeed += 10;
-                            break;
-                        case ConsoleKey.Subtract:
-                            RunSpeed -= 10;
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
             }
         }
 
-        protected override void Initialisation()
+        public class ConnectionMessage : IMessage
         {
-            throw new NotImplementedException();
+            public void Execute()
+            {
+                
+            }
         }
     }
 }
