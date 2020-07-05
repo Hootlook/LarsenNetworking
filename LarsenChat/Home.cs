@@ -26,19 +26,25 @@ namespace LarsenChat
             Packet packet = Packet.Empty;
             packet.WriteCommand(new Command(new App.PrintMessage() { message = inputBox.Text }));
 
+            messageBox.Items.Add(inputBox.Text);
+
             if (App.networker is Server)
             {
                 foreach (NetPlayer player in App.networker.Players.Values)
                 {
-                    player.OutGoingPackets.Enqueue(packet);
+                    player.OutPackets.Enqueue(packet);
                 }
 
-                messageBox.Items.Add(inputBox.Text);
             }
             else
             {
-                ((Client)App.networker).server.OutGoingPackets.Enqueue(packet);
+                ((Client)App.networker).server.OutPackets.Enqueue(packet);
             }
+        }
+
+        private void chatBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+
         }
     }
 }

@@ -5,13 +5,6 @@ using System.Reflection;
 
 namespace LarsenNetworking
 {
-    public enum Method
-    {
-        Unreliable,
-        Reliable,
-        Ordered
-    }
-
     public interface IMessage
     {
         void Execute();
@@ -21,9 +14,6 @@ namespace LarsenNetworking
     {
         public static List<Command> List { get; set; }
         public static Dictionary<Type, int> Lookup { get; set; }
-        public static Queue<Command> toSendUnreliably = new Queue<Command>();
-        public static Queue<Command> toSendReliably = new Queue<Command>();
-        public static Queue<Command> toSendOrdered = new Queue<Command>();
         public IMessage Message { get; set; }
         public int Id { get; private set; }
         public FieldInfo[] Fields { get; set; }
@@ -73,101 +63,20 @@ namespace LarsenNetworking
                 List.Add(command);
             }
         }
-
-        //public static void Send(IMessage message, Method sending)
-        //{
-        //    Command command = List[Lookup[message.GetType()]];
-
-        //    switch (sending)
-        //    {
-        //        case Method.Reliable:
-        //            lock (toSendReliably)
-        //                toSendReliably.Enqueue(command);
-        //            break;
-        //        case Method.Ordered:
-        //            lock (toSendOrdered)
-        //                toSendOrdered.Enqueue(command);
-        //            break;
-        //        case Method.Unreliable:
-        //            lock (toSendUnreliably)
-        //                toSendUnreliably.Enqueue(command);
-        //            break;
-        //        default:
-        //            break;
-        //    }
-        //}
     }
 
     public class PrintMessage : IMessage
     {
-        public ushort sequence;
-        public ushort ack;
-        public uint ackBits;
+        public string message;
 
-        public PrintMessage(ushort sequence, ushort ack, uint ackBits)
+        public PrintMessage(string message)
         {
-            this.sequence = sequence;
-            this.ack = ack;
-            this.ackBits = ackBits;
+            this.message = message;
         }
+
         public void Execute()
         {
-            Console.WriteLine("");
+            Console.WriteLine(message);
         }
     }
-
-    //public class PrintMessage : IMessage
-    //{
-    //    public ushort sequence;
-    //    public ushort ack;
-    //    public uint ackBits;
-
-    //    public PrintMessage(ushort sequence, ushort ack, uint ackBits)
-    //    {
-    //        this.sequence = sequence;
-    //        this.ack = ack;
-    //        this.ackBits = ackBits;
-    //    }
-    //    public void Execute()
-    //    {
-    //        Console.WriteLine(
-    //            $"//////////////////// REMOTE //////////////////////\n" +
-    //            $"Sequence : {sequence}\n" +
-    //            $"Ack : {ack}\n" +
-    //            $"AckBits : {Convert.ToString(ackBits, 2).PadLeft(PacketHandler.BUFFER_SIZE, '0')}\n" +
-    //            $"//////////////////////////////////////////////////"
-    //            );
-    //    }
-    //}
-
-    //public class ConnectMessage : IMessage
-    //{
-    //    public void Execute()
-    //    {
-    //        Command.Send(new ChallengeConnectMessage(Networker.CONNECT_MESSAGE), Method.Reliable);
-    //    }
-    //}
-
-    //public class ChallengeConnectMessage : IMessage
-    //{
-    //    public string connectMessage;
-
-    //    public ChallengeConnectMessage(string message)
-    //    {
-    //        connectMessage = message;
-    //    }
-
-    //    public void Execute()
-    //    {
-    //        Command.Send(new CompleteConnectMessage(), Method.Reliable);
-    //    }
-    //}
-
-    //public class CompleteConnectMessage : IMessage
-    //{
-    //    public void Execute()
-    //    {
-    //        throw new NotImplementedException();
-    //    }
-    //}
 }

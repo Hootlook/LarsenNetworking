@@ -10,6 +10,8 @@ namespace LarsenNetworking
     {
         public NetPlayer server;
 
+        public void Send(bool fakeSend) => server.Send(fakeSend);
+
         public bool Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
         {
             PeerIp = ResolveHost(host, port);
@@ -17,30 +19,26 @@ namespace LarsenNetworking
             server = new NetPlayer(PeerIp, Socket);
             IPEndPoint serverIp = server.Ip;
 
-            Packet packet = Packet.Empty;
-            packet.WriteCommand(new Command(new ConnectionMessage()));
+            //Packet packet = Packet.Empty;
+            //packet.WriteCommand(new Command(new ConnectionMessage()));
 
-            byte[] buffer = new byte[0];
+            //int retry = 0;
+            //while (true)
+            //{
+            //    if (Socket.Available > 0)
+            //        server.Receive(Socket.Receive(ref serverIp));
 
-            int retry = 0;
-            while (true)
-            {
-                if (Socket.Available > 0)
-                    buffer = Socket.Receive(ref serverIp);
+            //    if (server.InPackets.Count > 0)
+            //        if (server.InPackets.Dequeue().Messages[0].Message is ConnectionMessage)
+            //            break;
 
-                server.Receive(buffer);
+            //    Thread.Sleep(1000);
 
-                if (server.InComingPackets.Count > 0)
-                    if (server.InComingPackets.Dequeue().Messages[0].Message is ConnectionMessage)
-                        break;
+            //    server.OutPackets.Enqueue(packet);
+            //    server.Send();
 
-                Thread.Sleep(1000);
-
-                server.OutGoingPackets.Enqueue(packet);
-                server.Send();
-
-                if (retry++ > 5) return false;
-            }
+            //    if (retry++ > 5) return false;
+            //}
 
             try
             {
@@ -62,7 +60,7 @@ namespace LarsenNetworking
             Packet packet;
             byte[] buffer;
 
-            while (IsBound)
+            while (true)
             {
                 try
                 {
@@ -72,9 +70,9 @@ namespace LarsenNetworking
 
                         server.Receive(buffer);
 
-                        if (server.InComingPackets.Count != 0)
+                        if (server.InPackets.Count != 0)
                         {
-                            packet = server.InComingPackets.Dequeue();
+                            packet = server.InPackets.Dequeue();
                             for (int i = 0; i < packet.Messages.Count; i++)
                                 packet.Messages[i].Message.Execute();
                         }
@@ -84,7 +82,7 @@ namespace LarsenNetworking
 
                 try
                 {
-                    server.Send();
+                    server.Send(new Random().Next(1, 3) == 1);
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
             }

@@ -56,16 +56,16 @@ namespace LarsenNetworking
 
                         player.Receive(buffer);
 
-                        if (player.InComingPackets.Count != 0)
+                        if (player.InPackets.Count != 0)
                         {
-                            packet = player.InComingPackets.Dequeue();
+                            packet = player.InPackets.Dequeue();
                             for (int i = 0; i < packet.Messages.Count; i++)
                             {
                                 if (packet.Messages[i].Message is Client.ConnectionMessage)
                                 {
                                     Packet answere = Packet.Empty;
                                     answere.WriteCommand(new Command(new Client.ConnectionMessage()));
-                                    player.OutGoingPackets.Enqueue(answere);
+                                    player.OutPackets.Enqueue(answere);
                                     player.Send();
                                 }
                                 else

@@ -56,8 +56,9 @@
             this.chatBox.FormattingEnabled = true;
             this.chatBox.Location = new System.Drawing.Point(172, 1);
             this.chatBox.Name = "chatBox";
-            this.chatBox.Size = new System.Drawing.Size(1021, 695);
+            this.chatBox.Size = new System.Drawing.Size(1021, 689);
             this.chatBox.TabIndex = 1;
+            this.chatBox.SelectedIndexChanged += new System.EventHandler(this.chatBox_SelectedIndexChanged);
             // 
             // inputBox
             // 

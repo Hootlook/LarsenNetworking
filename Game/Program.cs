@@ -1,6 +1,5 @@
 ﻿using LarsenNetworking;
 using System;
-using System.Threading;
 
 namespace Game
 {
@@ -8,9 +7,14 @@ namespace Game
     {
         static void Main(string[] args)
         {
-            Networker entity;
-            int input;
-           
+            Server server = null;
+            Client client = null;
+
+            Command.Register(new IMessage[] {
+                new Client.ConnectionMessage(),
+                new PrintMessage("")
+            });
+
             Console.WriteLine(Utils.label);
             Utils.SlowWrite("Welcome to LarsenNetworking !\n");
             Console.ResetColor();
@@ -19,40 +23,31 @@ namespace Game
             Utils.SlowWrite("1) Host a Server");
             Utils.SlowWrite("2) Connect to a Server");
 
-            int.TryParse(Console.ReadLine(), out input);
+            int.TryParse(Console.ReadLine(), out int input);
             
-            switch (input)
-            {
-                case 1:
-                    entity = new Server(5);
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Clear();
-                    break;
-
-                case 2:
-                    entity = new Client();
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.Clear();
-                    break;
-
-                default:
-                    entity = new Server(5);
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Clear();
-                    break;
-            }
-
             try
             {
-                if (entity.IsServer)
+                switch (input)
                 {
-                    ((Server)entity).Run();
-                    Utils.SlowWrite("Server Started !\n");
-                }
-                else
-                {
-                    ((Client)entity).Connect();
-                    Utils.SlowWrite("Client Started !\n");
+                    case 1:
+                        server = new Server(5);
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.Clear();
+                        server.Run();
+                        Utils.SlowWrite("Server Started !\n");
+                        break;
+
+                    case 2:
+                        client = new Client();
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.Clear();
+                        Utils.SlowWrite(client.Connect() ?
+                            "Connection established !\n" :
+                            "Connection failed...\n");
+                        break;
+
+                    default:
+                        goto case 1;
                 }
             }
             catch (Exception e)
@@ -60,10 +55,19 @@ namespace Game
                 Console.WriteLine(e);
             }
 
-            while (true)
-            {
+            //if (client != null)
+            //{
+            //    for (int i = 0; i < 100; i++)
+            //    {
+            //        Packet packet = Packet.Empty;
+            //        packet.WriteCommand(new Command(new PrintMessage(i.ToString())));
+            //        client.server.OutPackets.Enqueue(packet);
+            //        bool fakeSend = new Random().Next(1, 3) == 1; 
+            //        //client.server.Send(fakeSend);
+            //    }
+            //}
 
-            }
+            Console.ReadLine();
         }
     }
 }

@@ -17,12 +17,9 @@ namespace LarsenNetworking.Tests
         [TestMethod()]
         public void PackTest()
         {
-            Packet packet = new Packet();
+            var please = NetPlayer.BitmaskToBoolArray(4042322160);
 
-            Command.Register(new IMessage[] {
-                new ChallengeConnectMessage("help"),
-                new ConnectMessage()
-            });
+            Packet packet = new Packet();
 
 
             Assert.Fail();
@@ -63,11 +60,11 @@ namespace LarsenNetworking.Tests
         [TestMethod()]
         public void WriteCommandTest()
         {
-            Command.Register(new IMessage[] { new PrintMessage("", "", "") });
-            Command command = new Command(new PrintMessage("PING", "PONG", "BANG"));
+            //Command.Register(new IMessage[] { new PrintMessage("", "", "") });
+            //Command command = new Command(new PrintMessage("PING", "PONG", "BANG"));
 
             Packet packet = new Packet();
-            packet.WriteCommand(command);
+            //packet.WriteCommand(command);
 
             byte[] bytes1 = packet.Data.ToArray();
 
@@ -82,37 +79,37 @@ namespace LarsenNetworking.Tests
 
         }
 
-        [TestMethod()]
-        public void WriteCommandWithFormaterTest()
-        {
-            Command.Register(new IMessage[] { new PrintMessage("", "", "") });
-            Command command = new Command(new PrintMessage("PING", "PONG", "BANG"));
+        //[TestMethod()]
+        //public void WriteCommandWithFormaterTest()
+        //{
+        //    //Command.Register(new IMessage[] { new PrintMessage("", "", "") });
+        //    //Command command = new Command(new PrintMessage("PING", "PONG", "BANG"));
 
-            Packet packet = new Packet();
+        //    Packet packet = new Packet();
 
-            byte[] byte1;
-            byte[] byte2;
+        //    byte[] byte1;
+        //    byte[] byte2;
 
-            var formater = new BinaryFormatter();
+        //    var formater = new BinaryFormatter();
 
-            using (var stream = new MemoryStream())
-            {
-                formater.Serialize(stream, "PING");
-                formater.Serialize(stream, "PONG");
-                formater.Serialize(stream, "BANG");
+        //    using (var stream = new MemoryStream())
+        //    {
+        //        formater.Serialize(stream, "PING");
+        //        formater.Serialize(stream, "PONG");
+        //        formater.Serialize(stream, "BANG");
 
-                byte1 = stream.ToArray();
-            }
+        //        byte1 = stream.ToArray();
+        //    }
 
-            using (var stream = new MemoryStream())
-            {
-                for (int i = 0; i < command.Fields.Length; i++)
-                {
-                    formater.Serialize(stream, command.Fields[i].GetValue(command.Message));
-                }
+        //    using (var stream = new MemoryStream())
+        //    {
+        //        for (int i = 0; i < command.Fields.Length; i++)
+        //        {
+        //            formater.Serialize(stream, command.Fields[i].GetValue(command.Message));
+        //        }
 
-                byte2 = stream.ToArray();
-            }
-        }
+        //        byte2 = stream.ToArray();
+        //    }
+        //}
     }
 }

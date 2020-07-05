@@ -6,12 +6,11 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
 using System.Reflection;
+using System.Threading;
+using System.Windows.Threading;
 
 namespace LarsenNetworking
 {
-
-	/// Brief description which ends at this dot. Details follow
-	/// here.
 	public abstract class Networker
 	{
 		public const ushort DEFAULT_PORT = 26950;
@@ -26,7 +25,8 @@ namespace LarsenNetworking
 			Connected,
 		}
 
-		public bool IsBound { get { return Socket.Client.IsBound; } }
+        public Dispatcher MainDispatcher { get; set; }
+        public bool IsBound { get { return Socket.Client.IsBound; } }
 		public State CurrentState { get; set; } = State.Disconnected;
 		public IPEndPoint PeerIp { get; set; }
 		public IPEndPoint Ip { get; set; }
@@ -42,7 +42,8 @@ namespace LarsenNetworking
 			Ip = ResolveHost("127.0.0.1", DEFAULT_PORT);
 			Socket = new UdpClient();
 			Time = new Time();
-
+			//MainDispatcher = Dispatcher.CurrentDispatcher; 
+				
 			Socket.Client.IOControl((IOControlCode)SIO_UDP_CONNRESET, new byte[] { 0, 0, 0, 0 }, null);
 		}
 
