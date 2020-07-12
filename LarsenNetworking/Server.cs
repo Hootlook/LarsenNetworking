@@ -61,17 +61,7 @@ namespace LarsenNetworking
                             packet = player.InPackets.Dequeue();
                             for (int i = 0; i < packet.Messages.Count; i++)
                             {
-                                if (packet.Messages[i].Message is Client.ConnectionMessage)
-                                {
-                                    Packet answere = Packet.Empty;
-                                    answere.WriteCommand(new Command(new Client.ConnectionMessage()));
-                                    player.OutPackets.Enqueue(answere);
-                                    player.Send();
-                                }
-                                else
-                                {
-                                    packet.Messages[i].Message.Execute();
-                                }
+                                packet.Messages[i].Message.Execute();
                             }
                         }
                     }

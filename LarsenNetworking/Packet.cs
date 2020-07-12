@@ -7,9 +7,7 @@ namespace LarsenNetworking
 {
     public class Packet
     {
-        public static Packet Empty { get { return new Packet(); } }
-
-        public const int mtuLimit = 1408;
+        public readonly static Packet Empty = new Packet();
         public ushort Sequence { get; set; }
         public ushort Ack { get; set; }
         public uint AckBits { get; set; }
@@ -68,7 +66,7 @@ namespace LarsenNetworking
             }
         }
 
-        public void WriteCommand(Command command)
+        public int WriteCommand(Command command)
         {
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
@@ -82,6 +80,8 @@ namespace LarsenNetworking
 
                 for (int a = 0; a < buffer.Length; a++)
                     Data.Add(buffer[a]);
+
+                return buffer.Length;
             }
         }
     }

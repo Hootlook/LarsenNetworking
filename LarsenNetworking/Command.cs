@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 
 namespace LarsenNetworking
@@ -17,12 +16,18 @@ namespace LarsenNetworking
         public IMessage Message { get; set; }
         public int Id { get; private set; }
         public FieldInfo[] Fields { get; set; }
+        public int Size { get; set; }
+        public ushort PacketId { get; set; }
 
         private Command(IMessage message, int id, FieldInfo[] fields)
         {
             Message = message;
             Fields = fields;
             Id = id;
+
+            Packet packet = Packet.Empty;
+
+            Size = packet.WriteCommand(this);
         }
 
         public Command(IMessage message)

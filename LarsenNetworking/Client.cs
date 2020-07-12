@@ -8,9 +8,9 @@ namespace LarsenNetworking
 {
     public class Client : Networker
     {
-        public NetPlayer server;
+        NetPlayer server;
 
-        public void Send(bool fakeSend) => server.Send(fakeSend);
+        public void Send(IMessage message) => server.Send(message);
 
         public bool Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
         {
@@ -19,26 +19,23 @@ namespace LarsenNetworking
             server = new NetPlayer(PeerIp, Socket);
             IPEndPoint serverIp = server.Ip;
 
-            //Packet packet = Packet.Empty;
-            //packet.WriteCommand(new Command(new ConnectionMessage()));
+            int retry = 0;
+            while (true)
+            {
+                if (Socket.Available > 0)
+                    server.Receive(Socket.Receive(ref serverIp));
 
-            //int retry = 0;
-            //while (true)
-            //{
-            //    if (Socket.Available > 0)
-            //        server.Receive(Socket.Receive(ref serverIp));
+                if (server.InPackets.Count > 0)
+                    if (server.InPackets.Dequeue().Messages[0].Message is ConnectionMessage)
+                        break;
 
-            //    if (server.InPackets.Count > 0)
-            //        if (server.InPackets.Dequeue().Messages[0].Message is ConnectionMessage)
-            //            break;
+                Thread.Sleep(1000);
 
-            //    Thread.Sleep(1000);
+                Send(new ConnectionMessage());
+                server.Send();
 
-            //    server.OutPackets.Enqueue(packet);
-            //    server.Send();
-
-            //    if (retry++ > 5) return false;
-            //}
+                if (retry++ > 5) return false;
+            }
 
             try
             {
@@ -87,13 +84,12 @@ namespace LarsenNetworking
                 catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
             }
         }
-
-        public class ConnectionMessage : IMessage
+    }
+    public class ConnectionMessage : IMessage
+    {
+        public void Execute()
         {
-            public void Execute()
-            {
-                
-            }
+
         }
     }
 }

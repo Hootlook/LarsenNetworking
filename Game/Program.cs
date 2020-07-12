@@ -11,7 +11,7 @@ namespace Game
             Client client = null;
 
             Command.Register(new IMessage[] {
-                new Client.ConnectionMessage(),
+                new ConnectionMessage(),
                 new PrintMessage("")
             });
 

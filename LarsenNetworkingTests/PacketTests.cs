@@ -11,12 +11,23 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace LarsenNetworking.Tests
 {
+    class MyClass
+    {
+        public int link;
+    }
+
     [TestClass()]
     public class PacketTests
     {
         [TestMethod()]
         public void PackTest()
         {
+            Command.Register(new IMessage[] {
+                new ConnectionMessage(),
+                new PrintMessage("")
+            });
+
+
             var please = NetPlayer.BitmaskToBoolArray(4042322160);
 
             Packet packet = new Packet();

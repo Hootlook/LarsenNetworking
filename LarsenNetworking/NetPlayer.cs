@@ -7,14 +7,6 @@ namespace LarsenNetworking
 {
     public class NetPlayer
     {
-        enum State
-        {
-            Connected,
-            Disconnected,
-            Retrying,
-        }
-
-        public string Username { get; set; }
         public IPEndPoint Ip { get; set; }
         public UdpClient Socket { get; set; }
 
@@ -25,27 +17,20 @@ namespace LarsenNetworking
         }
 
         #region PacketHandling
+        public List<Command> OutCommands { get; set; } = new List<Command>();
+        public Queue<Packet> OutPackets { get; set; } = new Queue<Packet>();
+        public Queue<Packet> InPackets { get; set; } = new Queue<Packet>();
+        public int MtuLimit { get; set; } = MTU_LIMIT;
+        public ushort Sequence { get; set; }
+        public ushort Ack { get; set; }
+
+        #region Mess
+        public const int BUFFER_SIZE = 32;
+        public const int MTU_LIMIT = 1408;
         public struct PacketData
         {
             public bool acked;
-        }
-
-        public const int BUFFER_SIZE = 32;
-        public List<IMessage> Messages { get; set; } = new List<IMessage>();
-        public Queue<Packet> OutPackets { get; set; } = new Queue<Packet>();
-        public Queue<Packet> InPackets { get; set; } = new Queue<Packet>();
-        public ushort Sequence { get; set; }
-        public ushort Ack { get; set; }
-        public uint AckBits { get; set; }
-
-        #region Mess
-        private uint[] sentSequenceBuffer = new uint[BUFFER_SIZE];
-        public PacketData[] sentPacketDatas = new PacketData[BUFFER_SIZE];
-        public ref PacketData InsertSentPacketData(uint sequence)
-        {
-            uint index = sequence % BUFFER_SIZE;
-            sentSequenceBuffer[index] = sequence;
-            return ref sentPacketDatas[index];
+            public int time;
         }
 
         private uint[] receivedSequenceBuffer = new uint[BUFFER_SIZE];
@@ -58,39 +43,25 @@ namespace LarsenNetworking
         }
         #endregion
 
-        public uint GenerateAckBits(PacketData[] packetDatas)
-        {
-            uint bits = 0;
-            uint mask = 1;
-
-            for (int i = 0; i < packetDatas.Length; ++i)
-            {
-                if (packetDatas[i].acked == true)
-                    bits |= mask;
-                mask <<= 1;
-            }
-
-            return bits;
-        }
-
         public void Send(bool fakeSend = false)
         {
-            Packet outGoingPacket = OutPackets.Count > 0 ? OutPackets.Dequeue() : Packet.Empty;
+            Packet outGoingPacket = Packet.Empty;
 
-            InsertSentPacketData(Sequence).acked = false;
-
-            AckBits = GenerateAckBits(receivedPacketDatas);
-
-            outGoingPacket.Sequence = Sequence;
+            outGoingPacket.Sequence = Sequence++;
             outGoingPacket.Ack = Ack;
-            outGoingPacket.AckBits = AckBits;
+            outGoingPacket.AckBits = GenerateReceivedAckBits();
+
+            for (int i = OutCommands.Count - 1; i >= 0; i--)
+            {
+                if (OutCommands[i].Size + outGoingPacket.Data.Count > MtuLimit) continue;
+                OutCommands[i].PacketId = outGoingPacket.Sequence;
+                outGoingPacket.WriteCommand(OutCommands[i]);
+            }
 
             byte[] packet = outGoingPacket.Pack();
 
             if (!fakeSend)
                 Socket.Send(packet, packet.Length, Ip);
-
-            Sequence++;
         }
 
         public void Receive(byte[] buffer)
@@ -103,15 +74,37 @@ namespace LarsenNetworking
 
             InsertReceivedPacketData(receivedPacket.Sequence).acked = true;
 
-            for (int i = 0; i < sentPacketDatas.Length; i++)
+            for (int bit = 0; bit < BUFFER_SIZE; bit++)
             {
-                bool acked = (receivedPacket.AckBits & (1 << i)) != 0;
+                bool acked = (receivedPacket.AckBits & (1 << bit)) != 0;
 
                 if (acked)
-                    sentPacketDatas[(receivedPacket.Ack - i) % BUFFER_SIZE].acked = true;
+                    OutCommands.RemoveAll(m => m.PacketId == (receivedPacket.Ack - bit) % BUFFER_SIZE);
             }
 
             InPackets.Enqueue(receivedPacket);
+        }
+
+        public void Send(IMessage message) => OutCommands.Add(Command.List[Command.Lookup[message.GetType()]]);
+
+        public uint GenerateReceivedAckBits()
+        {
+            uint bits = 0;
+            uint mask = 1;
+            uint lastSeq = 0;
+
+            for (int i = 0; i < receivedPacketDatas.Length; i++)
+            {
+                uint currentSequenceNumber = receivedSequenceBuffer[i];
+                uint lastSequenceNumber = receivedSequenceBuffer[lastSeq++];
+
+                if (receivedPacketDatas[i].acked == true && currentSequenceNumber == lastSequenceNumber + 1)
+                    bits |= mask;
+
+                mask <<= 1;
+            }
+
+            return bits;
         }
 
         public static bool[] BitmaskToBoolArray(uint mask)
