@@ -24,7 +24,6 @@ namespace LarsenNetworking
         public ushort Sequence { get; set; }
         public ushort Ack { get; set; }
 
-        #region Mess
         public const int BUFFER_SIZE = 32;
         public const int MTU_LIMIT = 1408;
         public struct PacketData
@@ -41,7 +40,6 @@ namespace LarsenNetworking
             receivedSequenceBuffer[index] = sequence;
             return ref receivedPacketDatas[index];
         }
-        #endregion
 
         public void Send(bool fakeSend = false)
         {
@@ -53,9 +51,14 @@ namespace LarsenNetworking
 
             for (int i = OutCommands.Count - 1; i >= 0; i--)
             {
-                if (OutCommands[i].Size + outGoingPacket.Data.Count > MtuLimit) continue;
-                OutCommands[i].PacketId = outGoingPacket.Sequence;
-                outGoingPacket.WriteCommand(OutCommands[i]);
+                Command currentCommand = OutCommands[i];
+
+                if ((currentCommand.SendTime - DateTime.Now).TotalSeconds > 1) continue;
+                if (currentCommand.Size + outGoingPacket.Data.Count > MtuLimit) continue;
+
+                currentCommand.PacketId = outGoingPacket.Sequence;
+                currentCommand.SendTime = DateTime.Now;
+                outGoingPacket.WriteCommand(currentCommand);
             }
 
             byte[] packet = outGoingPacket.Pack();

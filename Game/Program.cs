@@ -12,7 +12,6 @@ namespace Game
 
             Command.Register(new IMessage[] {
                 new ConnectionMessage(),
-                new PrintMessage("")
             });
 
             Console.WriteLine(Utils.label);
@@ -54,18 +53,6 @@ namespace Game
             {
                 Console.WriteLine(e);
             }
-
-            //if (client != null)
-            //{
-            //    for (int i = 0; i < 100; i++)
-            //    {
-            //        Packet packet = Packet.Empty;
-            //        packet.WriteCommand(new Command(new PrintMessage(i.ToString())));
-            //        client.server.OutPackets.Enqueue(packet);
-            //        bool fakeSend = new Random().Next(1, 3) == 1; 
-            //        //client.server.Send(fakeSend);
-            //    }
-            //}
 
             Console.ReadLine();
         }

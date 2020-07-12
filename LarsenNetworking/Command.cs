@@ -13,11 +13,12 @@ namespace LarsenNetworking
     {
         public static List<Command> List { get; set; }
         public static Dictionary<Type, int> Lookup { get; set; }
+        public FieldInfo[] Fields { get; set; }
         public IMessage Message { get; set; }
         public int Id { get; private set; }
-        public FieldInfo[] Fields { get; set; }
         public int Size { get; set; }
         public ushort PacketId { get; set; }
+        public DateTime SendTime { get; set; }
 
         private Command(IMessage message, int id, FieldInfo[] fields)
         {
@@ -67,21 +68,6 @@ namespace LarsenNetworking
                 Lookup.Add(messageType, command.Id);
                 List.Add(command);
             }
-        }
-    }
-
-    public class PrintMessage : IMessage
-    {
-        public string message;
-
-        public PrintMessage(string message)
-        {
-            this.message = message;
-        }
-
-        public void Execute()
-        {
-            Console.WriteLine(message);
         }
     }
 }

@@ -11,9 +11,19 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace LarsenNetworking.Tests
 {
-    class MyClass
+    public class PrintMessage : IMessage
     {
-        public int link;
+        public string message;
+
+        public PrintMessage(string message)
+        {
+            this.message = message;
+        }
+
+        public void Execute()
+        {
+            Console.WriteLine(message);
+        }
     }
 
     [TestClass()]
@@ -22,11 +32,6 @@ namespace LarsenNetworking.Tests
         [TestMethod()]
         public void PackTest()
         {
-            Command.Register(new IMessage[] {
-                new ConnectionMessage(),
-                new PrintMessage("")
-            });
-
 
             var please = NetPlayer.BitmaskToBoolArray(4042322160);
 
