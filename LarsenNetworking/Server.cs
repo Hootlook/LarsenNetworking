@@ -36,7 +36,6 @@ namespace LarsenNetworking
             IPEndPoint any = new IPEndPoint(IPAddress.Any, 0);
             IPEndPoint sender;
             NetPlayer player;
-            Packet packet;
             byte[] buffer;
 
             while (IsBound)
@@ -56,14 +55,8 @@ namespace LarsenNetworking
 
                         player.Receive(buffer);
 
-                        if (player.InPackets.Count != 0)
-                        {
-                            packet = player.InPackets.Dequeue();
-                            for (int i = 0; i < packet.Messages.Count; i++)
-                            {
-                                packet.Messages[i].Message.Execute();
-                            }
-                        }
+                        for (int i = 0; i < player.ReceivedCommands.Count; i++)
+                            player.ReceivedCommands.Dequeue().Message.Execute();
                     }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
@@ -71,9 +64,7 @@ namespace LarsenNetworking
                 try
                 {
                     foreach (NetPlayer netPlayer in Players.Values)
-                    {
                         netPlayer.Send();
-                    }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
             }

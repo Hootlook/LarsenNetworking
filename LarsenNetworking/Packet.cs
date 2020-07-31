@@ -7,7 +7,7 @@ namespace LarsenNetworking
 {
     public class Packet
     {
-        public readonly static Packet Empty = new Packet();
+        public static Packet Empty { get { return new Packet(); }  }
         public ushort Sequence { get; set; }
         public ushort Ack { get; set; }
         public uint AckBits { get; set; }
@@ -23,21 +23,20 @@ namespace LarsenNetworking
                 writer.Write(Ack);
                 writer.Write(AckBits);
 
-                if (Data != null)
-                    writer.Write(Data.ToArray());
+                writer.Write(Data.ToArray());
 
                 return stream.ToArray();
             }
         }
 
-        public static Packet Unpack(byte[] packet)
+        public static Packet Unpack(byte[] buffer)
         {
-            using (var stream = new MemoryStream(packet))
+            using (var stream = new MemoryStream(buffer))
             using (var reader = new BinaryReader(stream))
             {
                 try
                 {
-                    Packet p = new Packet
+                    Packet packet = new Packet
                     {
                         Sequence = reader.ReadUInt16(),
                         Ack = reader.ReadUInt16(),
@@ -53,10 +52,10 @@ namespace LarsenNetworking
                         for (int i = 0; i < command.Fields.Length; i++)
                             command.Fields[i].SetValue(command.Message, reader.Read(command.Fields[i].FieldType));
 
-                        p.Messages.Add(command);
+                        packet.Messages.Add(command);
                     }
 
-                    return p;
+                    return packet;
                 }
                 catch (Exception e)
                 {

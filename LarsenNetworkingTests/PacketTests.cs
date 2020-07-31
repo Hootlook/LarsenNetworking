@@ -66,33 +66,54 @@ namespace LarsenNetworking.Tests
         [TestMethod()]
         public void UnpackTest()
         {
-            //Command.Register(new IMessage[] { new PrintMessage("") });
-            //Command command = new Command(new PrintMessage("PING"));
-            //string changedValue = "PONG";
+            Command.Register(new IMessage[] {
+                new ConnectionMessage(),
+                new PrintMessage("")
+            });
 
-            //command.Fields[0].SetValue(command.Message, changedValue);
+            Packet packet = new Packet();
+
+            packet.WriteCommand(new Command(new ConnectionMessage()));
+            packet.WriteCommand(new Command(new ConnectionMessage()));
+            packet.WriteCommand(new Command(new ConnectionMessage()));
+            packet.WriteCommand(new Command(new ConnectionMessage()));
+
+            var buffer = packet.Pack();
+
+            Packet packet1 = Packet.Unpack(buffer);
+
+            bool result = true;
+
+            foreach (var item in packet1.Messages)
+                result &= item.Id == 0;
+
+            Assert.IsTrue(result);
         }
 
         [TestMethod()]
         public void WriteCommandTest()
         {
-            //Command.Register(new IMessage[] { new PrintMessage("", "", "") });
-            //Command command = new Command(new PrintMessage("PING", "PONG", "BANG"));
-
-            Packet packet = new Packet();
-            //packet.WriteCommand(command);
-
-            byte[] bytes1 = packet.Data.ToArray();
+            Command.Register(new IMessage[] {
+                new ConnectionMessage(),
+                new PrintMessage("")
+            });
 
             var stream = new MemoryStream();
             var writer = new BinaryWriter(stream);
+            
+            Packet packet = new Packet();
+            Packet packet1 = new Packet();
 
-            writer.Write("PING");
-            writer.Write("PONG");
-            writer.Write("BANG");
+            packet.WriteCommand(new Command(new ConnectionMessage()));
+            packet1.WriteCommand(new Command(new ConnectionMessage()));
 
-            byte[] bytes2 = stream.ToArray();
+            byte[] bytes = packet.Data.ToArray();
 
+            writer.Write(packet1.Data.ToArray());
+
+            byte[] bytes1 = stream.ToArray();
+
+            Assert.AreEqual(bytes.Length, bytes1.Length);
         }
 
         //[TestMethod()]

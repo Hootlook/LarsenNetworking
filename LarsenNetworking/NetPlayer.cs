@@ -17,9 +17,8 @@ namespace LarsenNetworking
         }
 
         #region PacketHandling
-        public List<Command> OutCommands { get; set; } = new List<Command>();
-        public Queue<Packet> OutPackets { get; set; } = new Queue<Packet>();
-        public Queue<Packet> InPackets { get; set; } = new Queue<Packet>();
+        public List<Command> SendingCommands { get; set; } = new List<Command>();
+        public Queue<Command> ReceivedCommands { get; set; } = new Queue<Command>();
         public int MtuLimit { get; set; } = MTU_LIMIT;
         public ushort Sequence { get; set; }
         public ushort Ack { get; set; }
@@ -40,6 +39,20 @@ namespace LarsenNetworking
             receivedSequenceBuffer[index] = sequence;
             return ref receivedPacketDatas[index];
         }
+        public uint GenerateReceivedAckBits()
+        {
+            uint bits = 0;
+            uint mask = 1;
+
+            for (int i = 0; i < receivedPacketDatas.Length; i++)
+            {
+                if (receivedPacketDatas[i].acked == true)
+                    bits |= mask;
+                mask <<= 1;
+            }
+
+            return bits;
+        }
 
         public void Send(bool fakeSend = false)
         {
@@ -49,16 +62,14 @@ namespace LarsenNetworking
             outGoingPacket.Ack = Ack;
             outGoingPacket.AckBits = GenerateReceivedAckBits();
 
-            for (int i = OutCommands.Count - 1; i >= 0; i--)
+            for (int i = SendingCommands.Count - 1; i >= 0; i--)
             {
-                Command currentCommand = OutCommands[i];
+                if ((DateTime.Now - SendingCommands[i].SendTime).TotalSeconds < 1) continue;
+                if (SendingCommands[i].Size + outGoingPacket.Data.Count > MtuLimit) continue;
 
-                if ((currentCommand.SendTime - DateTime.Now).TotalSeconds > 1) continue;
-                if (currentCommand.Size + outGoingPacket.Data.Count > MtuLimit) continue;
-
-                currentCommand.PacketId = outGoingPacket.Sequence;
-                currentCommand.SendTime = DateTime.Now;
-                outGoingPacket.WriteCommand(currentCommand);
+                SendingCommands[i].PacketId = outGoingPacket.Sequence;
+                SendingCommands[i].SendTime = DateTime.Now;
+                outGoingPacket.WriteCommand(SendingCommands[i]);
             }
 
             byte[] packet = outGoingPacket.Pack();
@@ -78,37 +89,14 @@ namespace LarsenNetworking
             InsertReceivedPacketData(receivedPacket.Sequence).acked = true;
 
             for (int bit = 0; bit < BUFFER_SIZE; bit++)
-            {
-                bool acked = (receivedPacket.AckBits & (1 << bit)) != 0;
+                if ((receivedPacket.AckBits & (1 << bit)) != 0)
+                    SendingCommands.RemoveAll(m => m.PacketId % BUFFER_SIZE == (receivedPacket.Ack - bit) % BUFFER_SIZE);
 
-                if (acked)
-                    OutCommands.RemoveAll(m => m.PacketId == (receivedPacket.Ack - bit) % BUFFER_SIZE);
-            }
-
-            InPackets.Enqueue(receivedPacket);
+            for (int i = 0; i < receivedPacket.Messages.Count; i++)
+                ReceivedCommands.Enqueue(receivedPacket.Messages[i]);
         }
 
-        public void Send(IMessage message) => OutCommands.Add(Command.List[Command.Lookup[message.GetType()]]);
-
-        public uint GenerateReceivedAckBits()
-        {
-            uint bits = 0;
-            uint mask = 1;
-            uint lastSeq = 0;
-
-            for (int i = 0; i < receivedPacketDatas.Length; i++)
-            {
-                uint currentSequenceNumber = receivedSequenceBuffer[i];
-                uint lastSequenceNumber = receivedSequenceBuffer[lastSeq++];
-
-                if (receivedPacketDatas[i].acked == true && currentSequenceNumber == lastSequenceNumber + 1)
-                    bits |= mask;
-
-                mask <<= 1;
-            }
-
-            return bits;
-        }
+        public void Send(IMessage message) => SendingCommands.Add(Command.List[Command.Lookup[message.GetType()]]);
 
         public static bool[] BitmaskToBoolArray(uint mask)
         {

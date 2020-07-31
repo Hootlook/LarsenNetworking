@@ -12,15 +12,16 @@ namespace Game
 
             Command.Register(new IMessage[] {
                 new ConnectionMessage(),
+                new PrintMessage("NONE")
             });
 
             Console.WriteLine(Utils.label);
-            Utils.SlowWrite("Welcome to LarsenNetworking !\n");
+            Console.WriteLine("Welcome to LarsenNetworking !\n");
             Console.ResetColor();
 
-            Utils.SlowWrite("Please chose what to do:\n");
-            Utils.SlowWrite("1) Host a Server");
-            Utils.SlowWrite("2) Connect to a Server");
+            Console.WriteLine("Please chose what to do:\n");
+            Console.WriteLine("1) Host a Server");
+            Console.WriteLine("2) Connect to a Server");
 
             int.TryParse(Console.ReadLine(), out int input);
             
@@ -33,17 +34,19 @@ namespace Game
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.Clear();
                         server.Run();
-                        Utils.SlowWrite("Server Started !\n");
+                        Console.WriteLine("Server Started !\n");
                         break;
 
                     case 2:
                         client = new Client();
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.Clear();
-                        Utils.SlowWrite(client.Connect() ?
+                        Console.WriteLine(client.Connect() ?
                             "Connection established !\n" :
                             "Connection failed...\n");
-                        break;
+                        //break;
+                        while (true)
+                            client.Send(new PrintMessage(Console.ReadLine()));
 
                     default:
                         goto case 1;
@@ -55,6 +58,21 @@ namespace Game
             }
 
             Console.ReadLine();
+        }
+
+        class PrintMessage : IMessage
+        {
+            public string _message;
+
+            public PrintMessage(string message)
+            {
+                _message = message;
+            }
+
+            public void Execute()
+            {
+                Console.WriteLine(_message);
+            }
         }
     }
 }

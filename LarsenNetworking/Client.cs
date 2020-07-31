@@ -20,19 +20,22 @@ namespace LarsenNetworking
             IPEndPoint serverIp = server.Ip;
 
             int retry = 0;
-            while (true)
+            bool success = false;
+            while (!success)
             {
-                if (Socket.Available > 0)
-                    server.Receive(Socket.Receive(ref serverIp));
+                server.Send();
 
-                if (server.InPackets.Count > 0)
-                    if (server.InPackets.Dequeue().Messages[0].Message is ConnectionMessage)
-                        break;
+                if (Socket.Available > 0)
+                    success = Socket.Receive(ref serverIp).Length > 0;
+
+                //if (Socket.Available > 0)
+                //    server.Receive(Socket.Receive(ref serverIp));
+
+                //for (int i = 0; i < server.ReceivedCommands.Count; i++)
+                //    if (server.ReceivedCommands.Dequeue().Message is ConnectionMessage)
+                //        success = true;
 
                 Thread.Sleep(1000);
-
-                Send(new ConnectionMessage());
-                server.Send();
 
                 if (retry++ > 5) return false;
             }
@@ -54,7 +57,6 @@ namespace LarsenNetworking
         private void Routine()
         {
             IPEndPoint serverIp = server.Ip;
-            Packet packet;
             byte[] buffer;
 
             while (true)
@@ -67,12 +69,8 @@ namespace LarsenNetworking
 
                         server.Receive(buffer);
 
-                        if (server.InPackets.Count != 0)
-                        {
-                            packet = server.InPackets.Dequeue();
-                            for (int i = 0; i < packet.Messages.Count; i++)
-                                packet.Messages[i].Message.Execute();
-                        }
+                        for (int i = 0; i < server.ReceivedCommands.Count; i++)
+                            server.ReceivedCommands.Dequeue().Message.Execute();
                     }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
