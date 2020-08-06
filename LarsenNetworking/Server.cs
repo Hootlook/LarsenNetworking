@@ -44,6 +44,13 @@ namespace LarsenNetworking
 
                 try
                 {
+                    foreach (NetPlayer netPlayer in Players.Values)
+                        netPlayer.Send();
+                }
+                catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
+
+                try
+                {
                     if (Socket.Available > 0)
                     {
                         buffer = Socket.Receive(ref sender);
@@ -60,13 +67,6 @@ namespace LarsenNetworking
                     }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
-
-                try
-                {
-                    foreach (NetPlayer netPlayer in Players.Values)
-                        netPlayer.Send();
-                }
-                catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
             }
         }        
     }

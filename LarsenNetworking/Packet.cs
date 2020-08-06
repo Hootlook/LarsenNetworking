@@ -83,6 +83,12 @@ namespace LarsenNetworking
                 return buffer.Length;
             }
         }
+
+        public bool IsNewerThan(ushort sequence)
+        {
+            return ((Sequence > sequence) && (Sequence - sequence <= 32768)) ||
+                   ((Sequence < sequence) && (sequence - Sequence > 32768));
+        }
     }
 }
 

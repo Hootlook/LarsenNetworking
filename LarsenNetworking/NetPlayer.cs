@@ -31,22 +31,44 @@ namespace LarsenNetworking
             public int time;
         }
 
-        private uint[] receivedSequenceBuffer = new uint[BUFFER_SIZE];
-        private PacketData[] receivedPacketDatas = new PacketData[BUFFER_SIZE];
-        public ref PacketData InsertReceivedPacketData(uint sequence)
+        private uint[] sequenceBuffer = new uint[BUFFER_SIZE];
+        private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
+        public ref PacketData InsertPacketData(uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
-            receivedSequenceBuffer[index] = sequence;
-            return ref receivedPacketDatas[index];
+            sequenceBuffer[index] = sequence;
+            return ref packetDatas[index];
         }
-        public uint GenerateReceivedAckBits()
+
+        public PacketData? GetPacketData(uint sequence)
+        {
+            uint index = sequence % BUFFER_SIZE;
+            if (sequenceBuffer[index] == sequence)
+                return packetDatas[index];
+            else
+                return null;
+        }
+
+        public bool PacketExist(uint sequence)
+        {
+            uint index = sequence % BUFFER_SIZE;
+            if (sequenceBuffer[index] == sequence)
+                return true;
+            else
+                return false;
+        }
+
+        public uint GenerateAckBits()
         {
             uint bits = 0;
             uint mask = 1;
 
-            for (int i = 0; i < receivedPacketDatas.Length; i++)
+            for (int i = 0; i < packetDatas.Length; i++)
             {
-                if (receivedPacketDatas[i].acked == true)
+                uint sequence = sequenceBuffer[i];
+                bool acked = packetDatas[i].acked;
+
+                if (acked && (sequence >= Ack - BUFFER_SIZE && sequence <= Ack))
                     bits |= mask;
                 mask <<= 1;
             }
@@ -60,7 +82,7 @@ namespace LarsenNetworking
 
             outGoingPacket.Sequence = Sequence++;
             outGoingPacket.Ack = Ack;
-            outGoingPacket.AckBits = GenerateReceivedAckBits();
+            outGoingPacket.AckBits = GenerateAckBits();
 
             for (int i = SendingCommands.Count - 1; i >= 0; i--)
             {
@@ -83,20 +105,30 @@ namespace LarsenNetworking
             Packet receivedPacket = Packet.Unpack(buffer);
             if (receivedPacket == null) return;
 
-            if (receivedPacket.Sequence > Ack)
+            if (receivedPacket.IsNewerThan(Ack))
+            {
                 Ack = receivedPacket.Sequence;
+            }
+            else
+            {
+                if (PacketExist(Ack))
+                    return;
+                if (GetPacketData(Ack).HasValue)
+                    if (GetPacketData(Ack).Value.acked)
+                        return;
+            }
 
-            InsertReceivedPacketData(receivedPacket.Sequence).acked = true;
+            InsertPacketData(receivedPacket.Sequence).acked = true;
 
             for (int bit = 0; bit < BUFFER_SIZE; bit++)
                 if ((receivedPacket.AckBits & (1 << bit)) != 0)
-                    SendingCommands.RemoveAll(m => m.PacketId % BUFFER_SIZE == (receivedPacket.Ack - bit) % BUFFER_SIZE);
+                    SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
 
             for (int i = 0; i < receivedPacket.Messages.Count; i++)
                 ReceivedCommands.Enqueue(receivedPacket.Messages[i]);
         }
 
-        public void Send(IMessage message) => SendingCommands.Add(Command.List[Command.Lookup[message.GetType()]]);
+        public void Send(IMessage message) => SendingCommands.Add(new Command(message));
 
         public static bool[] BitmaskToBoolArray(uint mask)
         {
@@ -111,6 +143,16 @@ namespace LarsenNetworking
             }
 
             return boolArray;
+        }
+
+        public static string BitmaskToString(uint mask)
+        {
+            string stringRep = "";
+
+            for (int i = 0; i < 32; i++)
+                stringRep += (mask & (1 << i)) != 0 ? "1" : "0";
+
+            return stringRep;
         }
         #endregion
     }

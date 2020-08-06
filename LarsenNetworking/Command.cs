@@ -36,6 +36,7 @@ namespace LarsenNetworking
             Command command = List[Lookup[message.GetType()]];
 
             Fields = command.Fields;
+            Size = command.Size;
             Id = command.Id;
             
             Message = message;
