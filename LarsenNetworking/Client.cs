@@ -63,12 +63,6 @@ namespace LarsenNetworking
             {
                 try
                 {
-                    server.Send(new Random().Next(1, 3) == 1);
-                }
-                catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
-
-                try
-                {
                     if (Socket.Available > 0)
                     {
                         buffer = Socket.Receive(ref serverIp);
@@ -80,6 +74,12 @@ namespace LarsenNetworking
                     }
                 }
                 catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
+
+                try
+                {
+                    server.Send();
+                }
+                catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
             }
         }
     }

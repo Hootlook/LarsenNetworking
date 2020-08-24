@@ -116,37 +116,12 @@ namespace LarsenNetworking.Tests
             Assert.AreEqual(bytes.Length, bytes1.Length);
         }
 
-        //[TestMethod()]
-        //public void WriteCommandWithFormaterTest()
-        //{
-        //    //Command.Register(new IMessage[] { new PrintMessage("", "", "") });
-        //    //Command command = new Command(new PrintMessage("PING", "PONG", "BANG"));
 
-        //    Packet packet = new Packet();
 
-        //    byte[] byte1;
-        //    byte[] byte2;
+        [TestMethod()]
+        public void NetPlayerLogic()
+        {
 
-        //    var formater = new BinaryFormatter();
-
-        //    using (var stream = new MemoryStream())
-        //    {
-        //        formater.Serialize(stream, "PING");
-        //        formater.Serialize(stream, "PONG");
-        //        formater.Serialize(stream, "BANG");
-
-        //        byte1 = stream.ToArray();
-        //    }
-
-        //    using (var stream = new MemoryStream())
-        //    {
-        //        for (int i = 0; i < command.Fields.Length; i++)
-        //        {
-        //            formater.Serialize(stream, command.Fields[i].GetValue(command.Message));
-        //        }
-
-        //        byte2 = stream.ToArray();
-        //    }
-        //}
+        }
     }
 }

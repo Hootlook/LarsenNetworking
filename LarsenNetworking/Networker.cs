@@ -42,10 +42,10 @@ namespace LarsenNetworking
 			Ip = ResolveHost("127.0.0.1", DEFAULT_PORT);
 			Socket = new UdpClient();
 			Time = new Time();
-			//MainDispatcher = Dispatcher.CurrentDispatcher; 
-				
-			Socket.Client.IOControl((IOControlCode)SIO_UDP_CONNRESET, new byte[] { 0, 0, 0, 0 }, null);
-		}
+            //MainDispatcher = Dispatcher.CurrentDispatcher; 
+
+            Socket.Client.IOControl(SIO_UDP_CONNRESET, new byte[] { 0 }, null);
+        }
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{

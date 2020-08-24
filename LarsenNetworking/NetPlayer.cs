@@ -20,7 +20,7 @@ namespace LarsenNetworking
         public List<Command> SendingCommands { get; set; } = new List<Command>();
         public Queue<Command> ReceivedCommands { get; set; } = new Queue<Command>();
         public int MtuLimit { get; set; } = MTU_LIMIT;
-        public ushort Sequence { get; set; }
+        public ushort Sequence { get; set; } 
         public ushort Ack { get; set; }
 
         public const int BUFFER_SIZE = 32;
@@ -49,40 +49,15 @@ namespace LarsenNetworking
                 return null;
         }
 
-        public bool PacketExist(uint sequence)
-        {
-            uint index = sequence % BUFFER_SIZE;
-            if (sequenceBuffer[index] == sequence)
-                return true;
-            else
-                return false;
-        }
-
-        public uint GenerateAckBits()
-        {
-            uint bits = 0;
-            uint mask = 1;
-
-            for (int i = 0; i < packetDatas.Length; i++)
-            {
-                uint sequence = sequenceBuffer[i];
-                bool acked = packetDatas[i].acked;
-
-                if (acked && (sequence >= Ack - BUFFER_SIZE && sequence <= Ack))
-                    bits |= mask;
-                mask <<= 1;
-            }
-
-            return bits;
-        }
-
-        public void Send(bool fakeSend = false)
+        public void Send(IMessage message = null)
         {
             Packet outGoingPacket = Packet.Empty;
 
             outGoingPacket.Sequence = Sequence++;
             outGoingPacket.Ack = Ack;
             outGoingPacket.AckBits = GenerateAckBits();
+
+            if (message != null) SendingCommands.Add(new Command(message));
 
             for (int i = SendingCommands.Count - 1; i >= 0; i--)
             {
@@ -96,8 +71,7 @@ namespace LarsenNetworking
 
             byte[] packet = outGoingPacket.Pack();
 
-            if (!fakeSend)
-                Socket.Send(packet, packet.Length, Ip);
+            Socket.Send(packet, packet.Length, Ip);
         }
 
         public void Receive(byte[] buffer)
@@ -106,53 +80,42 @@ namespace LarsenNetworking
             if (receivedPacket == null) return;
 
             if (receivedPacket.IsNewerThan(Ack))
-            {
                 Ack = receivedPacket.Sequence;
-            }
             else
             {
-                if (PacketExist(Ack))
+                if (GetPacketData(Ack).Value.acked)
                     return;
-                if (GetPacketData(Ack).HasValue)
-                    if (GetPacketData(Ack).Value.acked)
-                        return;
             }
 
             InsertPacketData(receivedPacket.Sequence).acked = true;
 
-            for (int bit = 0; bit < BUFFER_SIZE; bit++)
+            for (int bit = 0; bit < packetDatas.Length; bit++)
                 if ((receivedPacket.AckBits & (1 << bit)) != 0)
                     SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
+
 
             for (int i = 0; i < receivedPacket.Messages.Count; i++)
                 ReceivedCommands.Enqueue(receivedPacket.Messages[i]);
         }
 
-        public void Send(IMessage message) => SendingCommands.Add(new Command(message));
-
-        public static bool[] BitmaskToBoolArray(uint mask)
+        public uint GenerateAckBits()
         {
-            bool[] boolArray = new bool[32];
+            uint bits = 0;
+            uint mask = 1;
 
-            for (int i = 0; i < 32; i++)
+            for (uint i = 0; i < packetDatas.Length; i++)
             {
-                bool acked = (mask & (1 << i)) != 0;
+                uint index = (Ack - i) % BUFFER_SIZE;
 
-                if (acked)
-                    boolArray[i] = acked;
+                uint sequence = sequenceBuffer[index];
+                bool acked = packetDatas[index].acked;
+
+                if (acked && (sequence >= Ack - BUFFER_SIZE && sequence <= Ack))
+                    bits |= mask;
+                mask <<= 1;
             }
 
-            return boolArray;
-        }
-
-        public static string BitmaskToString(uint mask)
-        {
-            string stringRep = "";
-
-            for (int i = 0; i < 32; i++)
-                stringRep += (mask & (1 << i)) != 0 ? "1" : "0";
-
-            return stringRep;
+            return bits;
         }
         #endregion
     }

@@ -44,8 +44,7 @@ namespace Game
                         Console.WriteLine(client.Connect() ?
                             "Connection established !\n" :
                             "Connection failed...\n");
-                        //break;
-                        //causing nulls added to list 
+
                         while (true)
                             client.Send(new PrintMessage(Console.ReadLine()));
 
