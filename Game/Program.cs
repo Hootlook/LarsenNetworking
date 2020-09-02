@@ -1,5 +1,6 @@
 ﻿using LarsenNetworking;
 using System;
+using System.Collections.Generic;
 
 namespace Game
 {
@@ -7,9 +8,6 @@ namespace Game
     {
         static void Main(string[] args)
         {
-            Server server = null;
-            Client client = null;
-
             Command.Register(new IMessage[] {
                 new ConnectionMessage(),
                 new PrintMessage("NONE")
@@ -24,13 +22,13 @@ namespace Game
             Console.WriteLine("2) Connect to a Server");
 
             int.TryParse(Console.ReadLine(), out int input);
-            
+
             try
             {
                 switch (input)
                 {
                     case 1:
-                        server = new Server(5);
+                        Server server = new Server(5);
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.Clear();
                         server.Run();
@@ -38,7 +36,7 @@ namespace Game
                         break;
 
                     case 2:
-                        client = new Client();
+                        Client client = new Client();
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.Clear();
                         Console.WriteLine(client.Connect() ?

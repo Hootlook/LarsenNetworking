@@ -17,6 +17,7 @@ namespace LarsenNetworking
         }
 
         #region PacketHandling
+        private object CommandsLock { get; set; } = new object();
         public List<Command> SendingCommands { get; set; } = new List<Command>();
         public Queue<Command> ReceivedCommands { get; set; } = new Queue<Command>();
         public int MtuLimit { get; set; } = MTU_LIMIT;
@@ -30,7 +31,6 @@ namespace LarsenNetworking
             public bool acked;
             public int time;
         }
-
         private uint[] sequenceBuffer = new uint[BUFFER_SIZE];
         private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
         public ref PacketData InsertPacketData(uint sequence)
@@ -49,53 +49,66 @@ namespace LarsenNetworking
                 return null;
         }
 
-        public void Send(IMessage message = null)
+        public void Send(IMessage message)
         {
-            Packet outGoingPacket = Packet.Empty;
-
-            outGoingPacket.Sequence = Sequence++;
-            outGoingPacket.Ack = Ack;
-            outGoingPacket.AckBits = GenerateAckBits();
-
-            if (message != null) SendingCommands.Add(new Command(message));
-
-            for (int i = SendingCommands.Count - 1; i >= 0; i--)
+            lock (CommandsLock)
             {
-                if ((DateTime.Now - SendingCommands[i].SendTime).TotalSeconds < 1) continue;
-                if (SendingCommands[i].Size + outGoingPacket.Data.Count > MtuLimit) continue;
-
-                SendingCommands[i].PacketId = outGoingPacket.Sequence;
-                SendingCommands[i].SendTime = DateTime.Now;
-                outGoingPacket.WriteCommand(SendingCommands[i]);
+                SendingCommands.Add(new Command(message));
+                Send();
             }
+        }
 
-            byte[] packet = outGoingPacket.Pack();
+        public void Send()
+        {
+            lock (CommandsLock)
+            {
+                Packet outGoingPacket = Packet.Empty;
 
-            Socket.Send(packet, packet.Length, Ip);
+                outGoingPacket.Sequence = Sequence++;
+                outGoingPacket.Ack = Ack;
+                outGoingPacket.AckBits = GenerateAckBits();
+
+                for (int i = SendingCommands.Count - 1; i >= 0; i--)
+                {
+                    if ((DateTime.Now - SendingCommands[i].SendTime).TotalSeconds < 1) continue;
+                    if (SendingCommands[i].Size + outGoingPacket.Data.Count > MtuLimit) continue;
+
+                    SendingCommands[i].PacketId = outGoingPacket.Sequence;
+                    SendingCommands[i].SendTime = DateTime.Now;
+                    outGoingPacket.WriteCommand(SendingCommands[i]);
+                }
+
+                byte[] packet = outGoingPacket.Pack();
+
+                Socket.Send(packet, packet.Length, Ip);
+            }
         }
 
         public void Receive(byte[] buffer)
         {
-            Packet receivedPacket = Packet.Unpack(buffer);
-            if (receivedPacket == null) return;
-
-            if (receivedPacket.IsNewerThan(Ack))
-                Ack = receivedPacket.Sequence;
-            else
+            lock (CommandsLock)
             {
-                if (GetPacketData(Ack).Value.acked)
-                    return;
+                Packet receivedPacket = Packet.Unpack(buffer);
+                if (receivedPacket == null) return;
+
+                if (receivedPacket.IsNewerThan(Ack))
+                    Ack = receivedPacket.Sequence;
+                else
+                {
+                    if (GetPacketData(Ack).Value.acked)
+                        return;
+                }
+
+                InsertPacketData(receivedPacket.Sequence).acked = true;
+
+                for (int bit = 0; bit < packetDatas.Length; bit++)
+                    if ((receivedPacket.AckBits & (1 << bit)) != 0)
+                        SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
+
+
+                for (int i = 0; i < receivedPacket.Messages.Count; i++)
+                    ReceivedCommands.Enqueue(receivedPacket.Messages[i]);
             }
-
-            InsertPacketData(receivedPacket.Sequence).acked = true;
-
-            for (int bit = 0; bit < packetDatas.Length; bit++)
-                if ((receivedPacket.AckBits & (1 << bit)) != 0)
-                    SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
-
-
-            for (int i = 0; i < receivedPacket.Messages.Count; i++)
-                ReceivedCommands.Enqueue(receivedPacket.Messages[i]);
         }
 
         public uint GenerateAckBits()

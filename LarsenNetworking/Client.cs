@@ -8,7 +8,7 @@ namespace LarsenNetworking
 {
     public class Client : Networker
     {
-        NetPlayer server;
+        public NetPlayer server;
 
         public void Send(IMessage message) => server.Send(message);
 
