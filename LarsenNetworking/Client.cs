@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -17,7 +18,7 @@ namespace LarsenNetworking
             PeerIp = ResolveHost(host, port);
 
             server = new NetPlayer(PeerIp, Socket);
-            IPEndPoint serverIp = server.Ip;
+            IPEndPoint remoteIp = server.Ip;
 
             int retry = 0;
             bool success = false;
@@ -26,14 +27,7 @@ namespace LarsenNetworking
                 server.Send();
 
                 if (Socket.Available > 0)
-                    success = Socket.Receive(ref serverIp).Length > 0;
-
-                //if (Socket.Available > 0)
-                //    server.Receive(Socket.Receive(ref serverIp));
-
-                //for (int i = 0; i < server.ReceivedCommands.Count; i++)
-                //    if (server.ReceivedCommands.Dequeue().Message is ConnectionMessage)
-                //        success = true;
+                    success = Socket.Receive(ref remoteIp).Length > 0;
 
                 Thread.Sleep(1000);
 
@@ -42,7 +36,33 @@ namespace LarsenNetworking
 
             try
             {
-                Task.Run(Routine);
+                Task.Run(() =>
+                {
+                    IPEndPoint serverIp = server.Ip;
+                    byte[] buffer;
+
+                    while (true)
+                    {
+                        if (Socket.Available > 0)
+                        {
+                            buffer = Socket.Receive(ref serverIp);
+
+                            server.Receive(buffer);
+
+                            for (int i = 0; i < server.ReceivedCommands.Count; i++)
+                                server.ReceivedCommands.Dequeue().Message.Execute();
+                        }
+                    }
+                });
+
+                Task.Run(() =>
+                {
+                    while (true)
+                    {
+                        Thread.Sleep(1000 / TickRate);
+                        server.Send();
+                    }
+                });
             }
             catch (Exception e)
             {
@@ -53,36 +73,8 @@ namespace LarsenNetworking
 
             return true;
         }
-
-        private void Routine()
-        {
-            IPEndPoint serverIp = server.Ip;
-            byte[] buffer;
-
-            while (true)
-            {
-                try
-                {
-                    if (Socket.Available > 0)
-                    {
-                        buffer = Socket.Receive(ref serverIp);
-
-                        server.Receive(buffer);
-
-                        for (int i = 0; i < server.ReceivedCommands.Count; i++)
-                            server.ReceivedCommands.Dequeue().Message.Execute();
-                    }
-                }
-                catch (Exception e) { Console.WriteLine($"/!\\ Receiving error /!\\ : {e.Message}"); }
-
-                try
-                {
-                    server.Send();
-                }
-                catch (Exception e) { Console.WriteLine($"/!\\ Broadcast error /!\\ : {e.Message}"); }
-            }
-        }
     }
+
     public class ConnectionMessage : IMessage
     {
         public void Execute()

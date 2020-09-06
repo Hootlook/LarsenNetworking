@@ -8,6 +8,7 @@ using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Windows.Threading;
+using System.Diagnostics;
 
 namespace LarsenNetworking
 {
@@ -33,7 +34,9 @@ namespace LarsenNetworking
 		public int RunSpeed { get; set; } = 100;
 		public bool IsServer { get { return this is Server; } }
 		public Time Time { get; set; }
-		public uint MaxPlayers { get; set; }
+		public int TickRate { get; set; } = 30;
+		public int UpdateRate { get; set; }
+        public uint MaxPlayers { get; set; }
 		public UdpClient Socket { get; set; }
 		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
 

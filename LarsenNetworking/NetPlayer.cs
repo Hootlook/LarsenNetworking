@@ -58,7 +58,7 @@ namespace LarsenNetworking
             }
         }
 
-        public void Send()
+        public void Send(bool fakeSend = false)
         {
             lock (CommandsLock)
             {
@@ -80,7 +80,8 @@ namespace LarsenNetworking
 
                 byte[] packet = outGoingPacket.Pack();
 
-                Socket.Send(packet, packet.Length, Ip);
+                if (!fakeSend)
+                    Socket.Send(packet, packet.Length, Ip);
             }
         }
 
