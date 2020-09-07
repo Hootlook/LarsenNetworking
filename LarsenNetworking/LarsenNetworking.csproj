@@ -49,13 +49,11 @@
     <Compile Include="Enum.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="Networker.cs" />
-    <Compile Include="NetPlayer.cs" />
+    <Compile Include="Connection.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rpc.cs" />
     <Compile Include="ThreadManager.cs" />
-    <Compile Include="Client.cs" />
-    <Compile Include="Server.cs" />
     <Compile Include="Time.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

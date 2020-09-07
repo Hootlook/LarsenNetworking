@@ -5,12 +5,12 @@ using System.Net.Sockets;
 
 namespace LarsenNetworking
 {
-    public class NetPlayer
+    public class Connection
     {
         public IPEndPoint Ip { get; set; }
         public UdpClient Socket { get; set; }
 
-        public NetPlayer(IPEndPoint ip, UdpClient socket)
+        public Connection(IPEndPoint ip, UdpClient socket)
         {
             Socket = socket;
             Ip = ip;

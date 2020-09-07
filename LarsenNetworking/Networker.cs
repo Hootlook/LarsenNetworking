@@ -1,54 +1,122 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
-using System.Reflection;
 using System.Threading;
-using System.Windows.Threading;
-using System.Diagnostics;
+using System.Linq;
 
 namespace LarsenNetworking
 {
-	public abstract class Networker
+    public class Networker
 	{
 		public const ushort DEFAULT_PORT = 26950;
 		public const ushort BUILD_VERSION = 1;
 		public const string CONNECT_MESSAGE = "Hello i'd like to play pls";
 		private const int SIO_UDP_CONNRESET = -1744830452;
 
-		public enum State
-		{
-			Disconnected,
-			Initialising,
-			Connected,
-		}
-
-        public Dispatcher MainDispatcher { get; set; }
-        public bool IsBound { get { return Socket.Client.IsBound; } }
-		public State CurrentState { get; set; } = State.Disconnected;
-		public IPEndPoint PeerIp { get; set; }
-		public IPEndPoint Ip { get; set; }
-		public int RunSpeed { get; set; } = 100;
-		public bool IsServer { get { return this is Server; } }
-		public Time Time { get; set; }
+		public bool IsBound { get { return Socket.Client.IsBound; } }
+		public bool IsServer { get { return Server is null; } }
+		public uint MaxPlayers { get; set; } = 24;
+        public int RunSpeed { get; set; } = 100;
 		public int TickRate { get; set; } = 30;
 		public int UpdateRate { get; set; }
-        public uint MaxPlayers { get; set; }
-		public UdpClient Socket { get; set; }
-		public Dictionary<EndPoint, NetPlayer> Players { get; set; } = new Dictionary<EndPoint, NetPlayer>();
+        public Dictionary<IPEndPoint, Connection> Players { get; private set; }
+        public Connection Server { get; private set; }
+		public IPEndPoint ServerIp { get; private set; }
+		public IPEndPoint ClientIp { get; private set; }
+		public UdpClient Socket { get; private set; }
+		public Time Time { get; set; }
 
-		public Networker()
+        public Networker()
 		{
-			Ip = ResolveHost("127.0.0.1", DEFAULT_PORT);
 			Socket = new UdpClient();
 			Time = new Time();
-            //MainDispatcher = Dispatcher.CurrentDispatcher; 
 
             Socket.Client.IOControl(SIO_UDP_CONNRESET, new byte[] { 0 }, null);
         }
+
+		~Networker() => Socket.Dispose();
+
+		public void Host(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1) 
+		{
+			ClientIp = ResolveHost(host, port);
+			Socket.Client.Bind(ClientIp);
+			Players = new Dictionary<IPEndPoint, Connection>();
+
+			StartWorking(); 
+		}
+
+		public bool Connect(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1)
+		{
+			ClientIp = ResolveHost("127.0.0.1", DEFAULT_PORT);
+			ServerIp = ResolveHost(host, port);
+			Server = new Connection(ServerIp, Socket);
+
+			IPEndPoint remoteIp = Server.Ip;
+
+			int retry = 0;
+			bool success = false;
+			while (!success)
+			{
+				Server.Send();
+
+				if (Socket.Available > 0)
+					success = Socket.Receive(ref remoteIp).Length > 0;
+
+				Thread.Sleep(1000);
+
+				if (retry++ > 5) return false;
+			}
+
+			StartWorking();
+
+			return true;
+		}
+
+		void StartWorking()
+        {
+			Task.Run(() =>
+			{
+				IPEndPoint any = new IPEndPoint(IPAddress.Any, 0);
+				IPEndPoint sender;
+				Connection player;
+				byte[] buffer;
+
+				while (IsBound)
+				{
+					sender = ServerIp ?? any;
+
+					buffer = Socket.Receive(ref sender);
+
+					if (IsServer && !Players.ContainsKey(sender))
+						Players.Add(sender, new Connection(sender, Socket));
+
+					player = Server ?? Players[sender];
+
+					player.Receive(buffer);
+
+					for (int i = 0; i < player.ReceivedCommands.Count; i++)
+						player.ReceivedCommands.Dequeue().Message.Execute();
+				}
+			});
+
+			Task.Run(() =>
+			{
+				while (IsBound)
+				{
+					Thread.Sleep(1000 / TickRate);
+
+					if (Players != null)
+						foreach (var player in Players)
+							player.Value.Send();
+
+					Server?.Send();
+				}
+			});
+		}
+
+		public void Send(IMessage message) => Server?.Send(message);
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{

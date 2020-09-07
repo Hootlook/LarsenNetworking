@@ -8,6 +8,8 @@ namespace Game
     {
         static void Main(string[] args)
         {
+            Networker server = new Networker();
+
             Command.Register(new IMessage[] {
                 new ConnectionMessage(),
                 new PrintMessage("NONE")
@@ -28,23 +30,21 @@ namespace Game
                 switch (input)
                 {
                     case 1:
-                        Server server = new Server(5);
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.Clear();
-                        server.Run();
+                        server.Host();
                         Console.WriteLine("Server Started !\n");
                         break;
 
                     case 2:
-                        Client client = new Client();
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.Clear();
-                        Console.WriteLine(client.Connect() ?
+                        Console.WriteLine(server.Connect() ?
                             "Connection established !\n" :
                             "Connection failed...\n");
 
                         while (true)
-                            client.Send(new PrintMessage(Console.ReadLine()));
+                            server.Send(new PrintMessage(Console.ReadLine()));
 
                     default:
                         goto case 1;
@@ -70,6 +70,13 @@ namespace Game
             public void Execute()
             {
                 Console.WriteLine(_message);
+            }
+        }
+        public class ConnectionMessage : IMessage
+        {
+            public void Execute()
+            {
+
             }
         }
     }

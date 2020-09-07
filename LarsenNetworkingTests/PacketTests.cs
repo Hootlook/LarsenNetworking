@@ -26,17 +26,21 @@ namespace LarsenNetworking.Tests
         }
     }
 
+    public class ConnectionMessage : IMessage
+    {
+        public void Execute()
+        {
+
+        }
+    }
+
     [TestClass()]
     public class PacketTests
     {
         [TestMethod()]
         public void PackTest()
         {
-
-            var please = NetPlayer.BitmaskToBoolArray(4042322160);
-
             Packet packet = new Packet();
-
 
             Assert.Fail();
         }
