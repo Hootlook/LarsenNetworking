@@ -1,6 +1,9 @@
 ﻿using LarsenNetworking;
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using static LarsenNetworking.Connection;
+using static LarsenNetworking.Networker;
 
 namespace Game
 {
@@ -17,13 +20,16 @@ namespace Game
 
             Console.WriteLine(Utils.label);
             Console.WriteLine("Welcome to LarsenNetworking !\n");
-            Console.ResetColor();
 
             Console.WriteLine("Please chose what to do:\n");
             Console.WriteLine("1) Host a Server");
             Console.WriteLine("2) Connect to a Server");
 
             int.TryParse(Console.ReadLine(), out int input);
+
+            Console.WriteLine("\nTickRate in ms ?");
+            int.TryParse(Console.ReadLine(), out int tick);
+            server.TickRate = tick;
 
             try
             {
@@ -44,7 +50,7 @@ namespace Game
                             "Connection failed...\n");
 
                         while (true)
-                            server.Send(new PrintMessage(Console.ReadLine()));
+                            server.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
 
                     default:
                         goto case 1;
@@ -58,20 +64,6 @@ namespace Game
             Console.ReadLine();
         }
 
-        class PrintMessage : IMessage
-        {
-            public string _message;
-
-            public PrintMessage(string message)
-            {
-                _message = message;
-            }
-
-            public void Execute()
-            {
-                Console.WriteLine(_message);
-            }
-        }
         public class ConnectionMessage : IMessage
         {
             public void Execute()

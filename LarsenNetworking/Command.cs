@@ -16,7 +16,7 @@ namespace LarsenNetworking
         public FieldInfo[] Fields { get; set; }
         public IMessage Message { get; set; }
         public int Id { get; private set; }
-        public int Size { get; set; }
+        public int Size { get; private set; }
         public ushort PacketId { get; set; }
         public DateTime SendTime { get; set; }
 
@@ -26,9 +26,7 @@ namespace LarsenNetworking
             Fields = fields;
             Id = id;
 
-            Packet packet = Packet.Empty;
-
-            Size = packet.WriteCommand(this);
+            Size = Packet.Empty.WriteCommand(this);
         }
 
         public Command(IMessage message)

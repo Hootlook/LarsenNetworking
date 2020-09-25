@@ -49,12 +49,12 @@ namespace LarsenNetworking
                 return null;
         }
 
-        public void Send(IMessage message)
+        public void Send(IMessage message, bool fakeSend = false)
         {
             lock (CommandsLock)
             {
                 SendingCommands.Add(new Command(message));
-                Send();
+                Send(fakeSend);
             }
         }
 
@@ -80,7 +80,7 @@ namespace LarsenNetworking
 
                 byte[] packet = outGoingPacket.Pack();
 
-                if (!fakeSend)
+                if(!fakeSend)
                     Socket.Send(packet, packet.Length, Ip);
             }
         }
@@ -94,11 +94,9 @@ namespace LarsenNetworking
 
                 if (receivedPacket.IsNewerThan(Ack))
                     Ack = receivedPacket.Sequence;
-                else
-                {
-                    if (GetPacketData(Ack).Value.acked)
+
+                else if (GetPacketData(Ack).Value.acked)
                         return;
-                }
 
                 InsertPacketData(receivedPacket.Sequence).acked = true;
 
@@ -106,9 +104,22 @@ namespace LarsenNetworking
                     if ((receivedPacket.AckBits & (1 << bit)) != 0)
                         SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
 
-
                 for (int i = 0; i < receivedPacket.Messages.Count; i++)
                     ReceivedCommands.Enqueue(receivedPacket.Messages[i]);
+            }
+        }
+        public class PrintMessage : IMessage
+        {
+            public string _message;
+
+            public PrintMessage(string message)
+            {
+                _message = message;
+            }
+
+            public void Execute()
+            {
+                Console.WriteLine(_message);
             }
         }
 

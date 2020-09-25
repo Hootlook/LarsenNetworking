@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 
 namespace LarsenNetworking.Tests
 {
@@ -22,7 +23,7 @@ namespace LarsenNetworking.Tests
 
         public void Execute()
         {
-            Console.WriteLine(message);
+            PacketTests.remoteTexts.Add(message);
         }
     }
 
@@ -37,6 +38,8 @@ namespace LarsenNetworking.Tests
     [TestClass()]
     public class PacketTests
     {
+        public static List<string> remoteTexts = new List<string>();
+
         [TestMethod()]
         public void PackTest()
         {
@@ -123,8 +126,32 @@ namespace LarsenNetworking.Tests
 
 
         [TestMethod()]
-        public void NetPlayerLogic()
+        public void NetworkerTest()
         {
+            Command.Register(new IMessage[] {
+                new ConnectionMessage(),
+                new PrintMessage("")
+            });
+
+            var server = new Networker();
+            var client = new Networker();
+
+            server.Host();
+
+            if (!client.Connect()) Assert.Fail();
+
+            string[] texts = new []{ "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+
+            for (int i = 0; i < texts.Length; i++)
+            {
+                client.Send(new PrintMessage(texts[i]), new Random().Next(1, 3) == 1);
+            }
+
+            server.Clients.TryGetValue(client.ClientIp, out Connection remoteClient);
+
+            Thread.Sleep(10000);
+
+            Assert.AreEqual(remoteTexts.ToArray(), texts);
 
         }
     }

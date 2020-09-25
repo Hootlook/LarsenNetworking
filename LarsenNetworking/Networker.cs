@@ -5,6 +5,8 @@ using System.Net.Sockets;
 using System.Net;
 using System.Threading;
 using System.Linq;
+using System.Diagnostics;
+using static LarsenNetworking.Connection;
 
 namespace LarsenNetworking
 {
@@ -16,33 +18,38 @@ namespace LarsenNetworking
 		private const int SIO_UDP_CONNRESET = -1744830452;
 
 		public bool IsBound { get { return Socket.Client.IsBound; } }
-		public bool IsServer { get { return Server is null; } }
+		public bool IsServer { get { return Server == null; } }
 		public uint MaxPlayers { get; set; } = 24;
         public int RunSpeed { get; set; } = 100;
-		public int TickRate { get; set; } = 30;
-		public int UpdateRate { get; set; }
-        public Dictionary<IPEndPoint, Connection> Players { get; private set; }
+        public Dictionary<IPEndPoint, Connection> Clients { get; private set; }
         public Connection Server { get; private set; }
 		public IPEndPoint ServerIp { get; private set; }
 		public IPEndPoint ClientIp { get; private set; }
 		public UdpClient Socket { get; private set; }
-		public Time Time { get; set; }
+		public Tick Tick { get; private set; }
+		public Tick Update { get; private set; }
+        public Stopwatch Time { get; private set; }
+		public int TickRate { get; set; } = 30;
 
         public Networker()
 		{
 			Socket = new UdpClient();
-			Time = new Time();
+			Time = new Stopwatch();
+			Tick = new Tick(Time);
+			Update = new Tick(Time);
+
+			Time.Start();
 
             Socket.Client.IOControl(SIO_UDP_CONNRESET, new byte[] { 0 }, null);
         }
 
-		~Networker() => Socket.Dispose();
+		~Networker() => Socket?.Dispose();
 
 		public void Host(string host = "127.0.0.1", ushort port = DEFAULT_PORT + 1) 
 		{
 			ClientIp = ResolveHost(host, port);
 			Socket.Client.Bind(ClientIp);
-			Players = new Dictionary<IPEndPoint, Connection>();
+			Clients = new Dictionary<IPEndPoint, Connection>();
 
 			StartWorking(); 
 		}
@@ -60,7 +67,7 @@ namespace LarsenNetworking
 			while (!success)
 			{
 				Server.Send();
-
+				
 				if (Socket.Available > 0)
 					success = Socket.Receive(ref remoteIp).Length > 0;
 
@@ -89,10 +96,10 @@ namespace LarsenNetworking
 
 					buffer = Socket.Receive(ref sender);
 
-					if (IsServer && !Players.ContainsKey(sender))
-						Players.Add(sender, new Connection(sender, Socket));
+					if (IsServer && !Clients.ContainsKey(sender))
+						Clients.Add(sender, new Connection(sender, Socket));
 
-					player = Server ?? Players[sender];
+					player = Server ?? Clients[sender];
 
 					player.Receive(buffer);
 
@@ -107,16 +114,16 @@ namespace LarsenNetworking
 				{
 					Thread.Sleep(1000 / TickRate);
 
-					if (Players != null)
-						foreach (var player in Players)
+					if (IsServer)
+						foreach (var player in Clients)
 							player.Value.Send();
 
-					Server?.Send();
+					Server?.Send(new Random().Next(1, 3) == 1);
 				}
 			});
 		}
 
-		public void Send(IMessage message) => Server?.Send(message);
+		public void Send(IMessage message, bool fakeSend) => Server?.Send(message, fakeSend);
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{
@@ -128,14 +135,11 @@ namespace LarsenNetworking
 			if (!IPAddress.TryParse(host, out IPAddress ipAddress))
 			{
 				IPHostEntry hostCheck = Dns.GetHostEntry(Dns.GetHostName());
+
 				foreach (IPAddress ip in hostCheck.AddressList)
-				{
 					if (ip.AddressFamily == AddressFamily.InterNetwork)
-					{
 						if (ip.ToString() == host)
 							return new IPEndPoint(IPAddress.Parse("127.0.0.1"), port);
-					}
-				}
 
 				try
 				{

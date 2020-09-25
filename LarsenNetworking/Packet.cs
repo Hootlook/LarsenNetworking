@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace LarsenNetworking
 {
@@ -45,9 +44,7 @@ namespace LarsenNetworking
 
                     while (stream.Position != stream.Length)
                     {
-                        int messageId = reader.ReadInt32();
-
-                        Command command = Command.List[messageId];
+                        Command command = Command.List[reader.ReadInt32()];
 
                         for (int i = 0; i < command.Fields.Length; i++)
                             command.Fields[i].SetValue(command.Message, reader.Read(command.Fields[i].FieldType));

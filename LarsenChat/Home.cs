@@ -30,7 +30,7 @@ namespace LarsenChat
 
             if (App.networker is Server)
             {
-                foreach (Connection player in App.networker.Players.Values)
+                foreach (Connection player in App.networker.Clients.Values)
                 {
                     player.OutPackets.Enqueue(packet);
                 }
