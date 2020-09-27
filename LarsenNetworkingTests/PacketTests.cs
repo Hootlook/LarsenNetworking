@@ -12,7 +12,7 @@ using System.Threading;
 
 namespace LarsenNetworking.Tests
 {
-    public class PrintMessage : IMessage
+    public class PrintMessage : Command
     {
         public string message;
 
@@ -21,15 +21,15 @@ namespace LarsenNetworking.Tests
             this.message = message;
         }
 
-        public void Execute()
+        public override void Execute()
         {
             PacketTests.remoteTexts.Add(message);
         }
     }
 
-    public class ConnectionMessage : IMessage
+    public class ConnectionMessage : Command
     {
-        public void Execute()
+        public override void Execute()
         {
 
         }
@@ -73,17 +73,17 @@ namespace LarsenNetworking.Tests
         [TestMethod()]
         public void UnpackTest()
         {
-            Command.Register(new IMessage[] {
+            Command.Register(new Command[] {
                 new ConnectionMessage(),
                 new PrintMessage("")
             });
 
             Packet packet = new Packet();
 
-            packet.WriteCommand(new Command(new ConnectionMessage()));
-            packet.WriteCommand(new Command(new ConnectionMessage()));
-            packet.WriteCommand(new Command(new ConnectionMessage()));
-            packet.WriteCommand(new Command(new ConnectionMessage()));
+            packet.WriteCommand(new ConnectionMessage());
+            packet.WriteCommand(new ConnectionMessage());
+            packet.WriteCommand(new ConnectionMessage());
+            packet.WriteCommand(new ConnectionMessage());
 
             var buffer = packet.Pack();
 
@@ -91,7 +91,7 @@ namespace LarsenNetworking.Tests
 
             bool result = true;
 
-            foreach (var item in packet1.Messages)
+            foreach (var item in packet1.Commands)
                 result &= item.Id == 0;
 
             Assert.IsTrue(result);
@@ -100,7 +100,7 @@ namespace LarsenNetworking.Tests
         [TestMethod()]
         public void WriteCommandTest()
         {
-            Command.Register(new IMessage[] {
+            Command.Register(new Command[] {
                 new ConnectionMessage(),
                 new PrintMessage("")
             });
@@ -111,8 +111,8 @@ namespace LarsenNetworking.Tests
             Packet packet = new Packet();
             Packet packet1 = new Packet();
 
-            packet.WriteCommand(new Command(new ConnectionMessage()));
-            packet1.WriteCommand(new Command(new ConnectionMessage()));
+            packet.WriteCommand(new ConnectionMessage());
+            packet1.WriteCommand(new ConnectionMessage());
 
             byte[] bytes = packet.Data.ToArray();
 
@@ -128,7 +128,7 @@ namespace LarsenNetworking.Tests
         [TestMethod()]
         public void NetworkerTest()
         {
-            Command.Register(new IMessage[] {
+            Command.Register(new Command[] {
                 new ConnectionMessage(),
                 new PrintMessage("")
             });

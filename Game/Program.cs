@@ -1,9 +1,6 @@
 ﻿using LarsenNetworking;
 using System;
-using System.Collections.Generic;
-using System.Threading;
 using static LarsenNetworking.Connection;
-using static LarsenNetworking.Networker;
 
 namespace Game
 {
@@ -13,7 +10,7 @@ namespace Game
         {
             Networker server = new Networker();
 
-            Command.Register(new IMessage[] {
+            Command.Register(new Command[] {
                 new ConnectionMessage(),
                 new PrintMessage("NONE")
             });
@@ -64,11 +61,26 @@ namespace Game
             Console.ReadLine();
         }
 
-        public class ConnectionMessage : IMessage
+        public class PrintMessage : Command
         {
-            public void Execute()
-            {
+            public string _message;
 
+            public PrintMessage(string message)
+            {
+                _message = message;
+            }
+
+            public override void Execute()
+            {
+                Console.WriteLine(_message);
+            }
+        }
+
+        public class ConnectionMessage : Command
+        {
+            public override void Execute()
+            {
+                throw new NotImplementedException();
             }
         }
     }

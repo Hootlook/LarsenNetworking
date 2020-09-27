@@ -4,40 +4,50 @@ using System.Reflection;
 
 namespace LarsenNetworking
 {
-    public interface IMessage
-    {
-        void Execute();
-    }
-
-    public class Command
+    public abstract class Command
     {
         public static List<Command> List { get; set; }
         public static Dictionary<Type, int> Lookup { get; set; }
+        public static bool Initialized { get; private set; }
         public FieldInfo[] Fields { get; set; }
-        public IMessage Message { get; set; }
         public int Id { get; private set; }
         public int Size { get; private set; }
         public ushort PacketId { get; set; }
         public DateTime SendTime { get; set; }
 
-        private Command(IMessage message, int id, FieldInfo[] fields)
-        {
-            Message = message;
-            Fields = fields;
-            Id = id;
+        public abstract void Execute();
 
-            Size = Packet.Empty.WriteCommand(this);
-        }
+        public Command Clone() => (Command)MemberwiseClone();
 
-        public Command(IMessage message)
+        public Command()
         {
-            Command command = List[Lookup[message.GetType()]];
+            if (!Initialized) return;
+
+            Command command = List[Lookup[GetType()]];
 
             Fields = command.Fields;
             Size = command.Size;
             Id = command.Id;
+        }
+
+        public static void Register(Command[] commandes)
+        {
+            Lookup = new Dictionary<Type, int>();
+            List = new List<Command>();
             
-            Message = message;
+            foreach (Command command in commandes)
+            {
+                Type commandType = command.GetType();
+
+                command.Id = List.Count;
+                command.Fields = commandType.GetFields();
+                command.Size = Packet.Empty.WriteCommand(command);
+
+                Lookup.Add(commandType, command.Id);
+                List.Add(command);
+            }
+
+            Initialized = true;
         }
 
         //public static void Initialize()
@@ -55,18 +65,5 @@ namespace LarsenNetworking
         //        List.Add(registry);
         //    }
         //}
-        public static void Register(IMessage[] messages)
-        {
-            Lookup = new Dictionary<Type, int>();
-            List = new List<Command>();
-
-            foreach (IMessage message in messages)
-            {
-                Type messageType = message.GetType();
-                Command command = new Command(message, List.Count, messageType.GetFields());
-                Lookup.Add(messageType, command.Id);
-                List.Add(command);
-            }
-        }
     }
 }

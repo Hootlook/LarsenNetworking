@@ -104,7 +104,7 @@ namespace LarsenNetworking
 					player.Receive(buffer);
 
 					for (int i = 0; i < player.ReceivedCommands.Count; i++)
-						player.ReceivedCommands.Dequeue().Message.Execute();
+						player.ReceivedCommands.Dequeue().Execute();
 				}
 			});
 
@@ -123,7 +123,7 @@ namespace LarsenNetworking
 			});
 		}
 
-		public void Send(IMessage message, bool fakeSend) => Server?.Send(message, fakeSend);
+		public void Send(Command command, bool fakeSend) => Server?.Send(command, fakeSend);
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{

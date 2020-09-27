@@ -49,11 +49,11 @@ namespace LarsenNetworking
                 return null;
         }
 
-        public void Send(IMessage message, bool fakeSend = false)
+        public void Send(Command command, bool fakeSend = false)
         {
             lock (CommandsLock)
             {
-                SendingCommands.Add(new Command(message));
+                SendingCommands.Add(command);
                 Send(fakeSend);
             }
         }
@@ -87,40 +87,23 @@ namespace LarsenNetworking
 
         public void Receive(byte[] buffer)
         {
-            lock (CommandsLock)
-            {
-                Packet receivedPacket = Packet.Unpack(buffer);
-                if (receivedPacket == null) return;
+            Packet receivedPacket = Packet.Unpack(buffer);
+            if (receivedPacket == null) return;
 
-                if (receivedPacket.IsNewerThan(Ack))
-                    Ack = receivedPacket.Sequence;
+            if (receivedPacket.IsNewerThan(Ack))
+                Ack = receivedPacket.Sequence;
 
-                else if (GetPacketData(Ack).Value.acked)
-                        return;
+            else if (GetPacketData(Ack).Value.acked)
+                return;
 
-                InsertPacketData(receivedPacket.Sequence).acked = true;
+            InsertPacketData(receivedPacket.Sequence).acked = true;
 
-                for (int bit = 0; bit < packetDatas.Length; bit++)
-                    if ((receivedPacket.AckBits & (1 << bit)) != 0)
-                        SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
+            for (int bit = 0; bit < packetDatas.Length; bit++)
+                if ((receivedPacket.AckBits & (1 << bit)) != 0)
+                    SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
 
-                for (int i = 0; i < receivedPacket.Messages.Count; i++)
-                    ReceivedCommands.Enqueue(receivedPacket.Messages[i]);
-            }
-        }
-        public class PrintMessage : IMessage
-        {
-            public string _message;
-
-            public PrintMessage(string message)
-            {
-                _message = message;
-            }
-
-            public void Execute()
-            {
-                Console.WriteLine(_message);
-            }
+            for (int i = 0; i < receivedPacket.Commands.Count; i++)
+                ReceivedCommands.Enqueue(receivedPacket.Commands[i]);
         }
 
         public uint GenerateAckBits()

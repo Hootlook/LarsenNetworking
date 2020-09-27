@@ -11,7 +11,7 @@ namespace LarsenNetworking
         public ushort Ack { get; set; }
         public uint AckBits { get; set; }
         public List<byte> Data { get; set; } = new List<byte>();
-        public List<Command> Messages { get; set; } = new List<Command>();
+        public List<Command> Commands { get; set; } = new List<Command>();
 
         public byte[] Pack()
         {
@@ -44,12 +44,12 @@ namespace LarsenNetworking
 
                     while (stream.Position != stream.Length)
                     {
-                        Command command = Command.List[reader.ReadInt32()];
+                        Command command = Command.List[reader.ReadInt32()].Clone();
 
                         for (int i = 0; i < command.Fields.Length; i++)
-                            command.Fields[i].SetValue(command.Message, reader.Read(command.Fields[i].FieldType));
+                            command.Fields[i].SetValue(command, reader.Read(command.Fields[i].FieldType));
 
-                        packet.Messages.Add(command);
+                        packet.Commands.Add(command);
                     }
 
                     return packet;
@@ -70,7 +70,7 @@ namespace LarsenNetworking
                 writer.Write(command.Id);
 
                 for (int i = 0; i < command.Fields.Length; i++)
-                    writer.Write((dynamic)command.Fields[i].GetValue(command.Message));
+                    writer.Write((dynamic)command.Fields[i].GetValue(command));
 
                 byte[] buffer = stream.ToArray();
 

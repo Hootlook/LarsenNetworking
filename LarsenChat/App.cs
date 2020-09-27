@@ -17,18 +17,18 @@ namespace LarsenChat
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Command.Register(new IMessage[] { 
-                new Client.ConnectionMessage(),
+            Command.Register(new Command[] { 
                 new PrintMessage() 
             });
 
             Application.Run(new MainForm());
         }
 
-        public class PrintMessage : IMessage
+        public class PrintMessage : Command
         {
             public string message;
-            public void Execute()
+
+            public override void Execute()
             {
                 HomeForm.messageBox.Items.Add(message);
             }
