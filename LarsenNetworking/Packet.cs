@@ -46,6 +46,9 @@ namespace LarsenNetworking
                     {
                         Command command = Command.List[reader.ReadInt32()].Clone();
 
+                        if (command.Method != Command.SendingMethod.Unreliable)
+                            command.OrderId = reader.ReadUInt16();
+
                         for (int i = 0; i < command.Fields.Length; i++)
                             command.Fields[i].SetValue(command, reader.Read(command.Fields[i].FieldType));
 
@@ -68,6 +71,9 @@ namespace LarsenNetworking
             using (var writer = new BinaryWriter(stream))
             {
                 writer.Write(command.Id);
+
+                if (command.Method != Command.SendingMethod.Unreliable)
+                    writer.Write(command.OrderId);
 
                 for (int i = 0; i < command.Fields.Length; i++)
                     writer.Write((dynamic)command.Fields[i].GetValue(command));

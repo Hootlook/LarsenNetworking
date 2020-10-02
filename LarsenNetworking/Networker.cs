@@ -4,13 +4,11 @@ using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
 using System.Threading;
-using System.Linq;
 using System.Diagnostics;
-using static LarsenNetworking.Connection;
 
 namespace LarsenNetworking
 {
-    public class Networker
+	public class Networker
 	{
 		public const ushort DEFAULT_PORT = 26950;
 		public const ushort BUILD_VERSION = 1;
@@ -118,7 +116,7 @@ namespace LarsenNetworking
 						foreach (var player in Clients)
 							player.Value.Send();
 
-					Server?.Send(new Random().Next(1, 3) == 1);
+					Server?.Send(fakeSend: new Random().Next(1, 3) == 1);
 				}
 			});
 		}

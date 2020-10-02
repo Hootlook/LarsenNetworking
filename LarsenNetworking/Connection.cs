@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using static LarsenNetworking.Command;
 
 namespace LarsenNetworking
 {
@@ -23,6 +24,7 @@ namespace LarsenNetworking
         public int MtuLimit { get; set; } = MTU_LIMIT;
         public ushort Sequence { get; set; } 
         public ushort Ack { get; set; }
+        public ushort OrderId { get; set; }
 
         public const int BUFFER_SIZE = 32;
         public const int MTU_LIMIT = 1408;
@@ -49,16 +51,7 @@ namespace LarsenNetworking
                 return null;
         }
 
-        public void Send(Command command, bool fakeSend = false)
-        {
-            lock (CommandsLock)
-            {
-                SendingCommands.Add(command);
-                Send(fakeSend);
-            }
-        }
-
-        public void Send(bool fakeSend = false)
+        public void Send(Command command = null, bool fakeSend = false)
         {
             lock (CommandsLock)
             {
@@ -68,9 +61,21 @@ namespace LarsenNetworking
                 outGoingPacket.Ack = Ack;
                 outGoingPacket.AckBits = GenerateAckBits();
 
+                if (command != null)
+                {
+                    if (command.Method == SendingMethod.ReliableOrdered)
+                        command.OrderId = OrderId++;
+
+                    if (command.Method == SendingMethod.Unreliable)
+                        outGoingPacket.WriteCommand(command);
+
+                    if (command.Method != SendingMethod.Unreliable)
+                        SendingCommands.Add(command);
+                }
+
                 for (int i = SendingCommands.Count - 1; i >= 0; i--)
                 {
-                    if ((DateTime.Now - SendingCommands[i].SendTime).TotalSeconds < 1) continue;
+                    if ((DateTime.Now - SendingCommands[i].SendTime).TotalMilliseconds < 100) continue;
                     if (SendingCommands[i].Size + outGoingPacket.Data.Count > MtuLimit) continue;
 
                     SendingCommands[i].PacketId = outGoingPacket.Sequence;

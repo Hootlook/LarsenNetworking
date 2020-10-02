@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 
 namespace LarsenNetworking
@@ -9,10 +10,12 @@ namespace LarsenNetworking
         public static List<Command> List { get; set; }
         public static Dictionary<Type, int> Lookup { get; set; }
         public static bool Initialized { get; private set; }
+        public SendingMethod Method { get; private set; }
         public FieldInfo[] Fields { get; set; }
-        public int Id { get; private set; }
         public int Size { get; private set; }
+        public int Id { get; private set; }
         public ushort PacketId { get; set; }
+        public ushort OrderId { get; set; }
         public DateTime SendTime { get; set; }
 
         public abstract void Execute();
@@ -25,6 +28,7 @@ namespace LarsenNetworking
 
             Command command = List[Lookup[GetType()]];
 
+            Method = command.Method;
             Fields = command.Fields;
             Size = command.Size;
             Id = command.Id;
@@ -37,13 +41,16 @@ namespace LarsenNetworking
             
             foreach (Command command in commandes)
             {
-                Type commandType = command.GetType();
+                Type type = command.GetType();
+                Type attField = typeof(CmdFieldAttribute);
+                Type attType = typeof(CmdTypeAttribute);
 
-                command.Id = List.Count;
-                command.Fields = commandType.GetFields();
+                command.Method = (type.GetCustomAttribute(attType, false) as CmdTypeAttribute)?.Method ?? SendingMethod.ReliableOrdered;
+                command.Fields = type.GetFields().Where(i => i.GetCustomAttributes(attField, false).Length > 0).ToArray();
                 command.Size = Packet.Empty.WriteCommand(command);
+                command.Id = List.Count;
 
-                Lookup.Add(commandType, command.Id);
+                Lookup.Add(type, command.Id);
                 List.Add(command);
             }
 
@@ -65,5 +72,22 @@ namespace LarsenNetworking
         //        List.Add(registry);
         //    }
         //}
+
+        [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
+        public class CmdTypeAttribute : Attribute
+        {
+            public SendingMethod Method { get; set; }
+            public CmdTypeAttribute(SendingMethod method) => Method = method;
+        }
+
+        [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
+        public class CmdFieldAttribute : Attribute { }
+
+        public enum SendingMethod
+        {
+            Unreliable,
+            Reliable,
+            ReliableOrdered
+        }
     }
 }

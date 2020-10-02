@@ -1,6 +1,5 @@
 ﻿using LarsenNetworking;
 using System;
-using static LarsenNetworking.Connection;
 
 namespace Game
 {
@@ -61,18 +60,20 @@ namespace Game
             Console.ReadLine();
         }
 
+        [CmdType(SendingMethod.Reliable)]
         public class PrintMessage : Command
         {
-            public string _message;
+            [CmdField]
+            public string Message;
 
             public PrintMessage(string message)
             {
-                _message = message;
+                Message = message;
             }
 
             public override void Execute()
             {
-                Console.WriteLine(_message);
+                Console.WriteLine(Message);
             }
         }
 
