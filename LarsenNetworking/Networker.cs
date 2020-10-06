@@ -100,9 +100,6 @@ namespace LarsenNetworking
 					player = Server ?? Clients[sender];
 
 					player.Receive(buffer);
-
-					for (int i = 0; i < player.ReceivedCommands.Count; i++)
-						player.ReceivedCommands.Dequeue().Execute();
 				}
 			});
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using static LarsenNetworking.Command;
@@ -63,7 +64,7 @@ namespace LarsenNetworking
 
                 if (command != null)
                 {
-                    if (command.Method == SendingMethod.ReliableOrdered)
+                    if (command.Method != SendingMethod.Reliable)
                         command.OrderId = OrderId++;
 
                     if (command.Method == SendingMethod.Unreliable)
@@ -129,6 +130,10 @@ namespace LarsenNetworking
             }
 
             return bits;
+        }
+
+        public void Update()
+        {
         }
         #endregion
     }

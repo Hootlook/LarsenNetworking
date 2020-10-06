@@ -46,7 +46,7 @@ namespace LarsenNetworking
                     {
                         Command command = Command.List[reader.ReadInt32()].Clone();
 
-                        if (command.Method != Command.SendingMethod.Unreliable)
+                        if (command.Method != Command.SendingMethod.Reliable)
                             command.OrderId = reader.ReadUInt16();
 
                         for (int i = 0; i < command.Fields.Length; i++)
@@ -72,7 +72,7 @@ namespace LarsenNetworking
             {
                 writer.Write(command.Id);
 
-                if (command.Method != Command.SendingMethod.Unreliable)
+                if (command.Method != Command.SendingMethod.Reliable)
                     writer.Write(command.OrderId);
 
                 for (int i = 0; i < command.Fields.Length; i++)

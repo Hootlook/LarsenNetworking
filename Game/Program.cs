@@ -1,5 +1,8 @@
 ﻿using LarsenNetworking;
 using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Game
 {
@@ -7,7 +10,7 @@ namespace Game
     {
         static void Main(string[] args)
         {
-            Networker server = new Networker();
+            Networker networker = new Networker();
 
             Command.Register(new Command[] {
                 new ConnectionMessage(),
@@ -25,7 +28,7 @@ namespace Game
 
             Console.WriteLine("\nTickRate in ms ?");
             int.TryParse(Console.ReadLine(), out int tick);
-            server.TickRate = tick;
+            networker.TickRate = tick;
 
             try
             {
@@ -34,19 +37,28 @@ namespace Game
                     case 1:
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.Clear();
-                        server.Host();
+                        networker.Host();
                         Console.WriteLine("Server Started !\n");
+
+                        Task.Run(() =>
+                        {
+                            while (true)
+                                for (int j = 0; j < networker.Clients.Count; j++)
+                                    for (int i = 0; i < networker.Clients.Values.ToArray()[j].ReceivedCommands.Count; i++)
+                                        networker.Clients.Values.ToArray()[j].ReceivedCommands.Dequeue().Execute();
+                        });
+
                         break;
 
                     case 2:
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.Clear();
-                        Console.WriteLine(server.Connect() ?
+                        Console.WriteLine(networker.Connect() ?
                             "Connection established !\n" :
                             "Connection failed...\n");
 
                         while (true)
-                            server.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
+                            networker.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
 
                     default:
                         goto case 1;
