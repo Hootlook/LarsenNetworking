@@ -43,9 +43,9 @@ namespace Game
                         Task.Run(() =>
                         {
                             while (true)
-                                for (int j = 0; j < networker.Clients.Count; j++)
-                                    for (int i = 0; i < networker.Clients.Values.ToArray()[j].ReceivedCommands.Count; i++)
-                                        networker.Clients.Values.ToArray()[j].ReceivedCommands.Dequeue().Execute();
+                                lock(networker.Clients)
+                                    foreach (var client in networker.Clients)
+                                        client.Value?.ToString();
                         });
 
                         break;

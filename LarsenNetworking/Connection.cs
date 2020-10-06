@@ -93,23 +93,26 @@ namespace LarsenNetworking
 
         public void Receive(byte[] buffer)
         {
-            Packet receivedPacket = Packet.Unpack(buffer);
-            if (receivedPacket == null) return;
+            lock (CommandsLock)
+            {
+                Packet receivedPacket = Packet.Unpack(buffer);
+                if (receivedPacket == null) return;
 
-            if (receivedPacket.IsNewerThan(Ack))
-                Ack = receivedPacket.Sequence;
+                if (receivedPacket.IsNewerThan(Ack))
+                    Ack = receivedPacket.Sequence;
 
-            else if (GetPacketData(Ack).Value.acked)
-                return;
+                else if (GetPacketData(Ack).Value.acked)
+                    return;
 
-            InsertPacketData(receivedPacket.Sequence).acked = true;
+                InsertPacketData(receivedPacket.Sequence).acked = true;
 
-            for (int bit = 0; bit < packetDatas.Length; bit++)
-                if ((receivedPacket.AckBits & (1 << bit)) != 0)
-                    SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
+                for (int bit = 0; bit < packetDatas.Length; bit++)
+                    if ((receivedPacket.AckBits & (1 << bit)) != 0)
+                        SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
 
-            for (int i = 0; i < receivedPacket.Commands.Count; i++)
-                ReceivedCommands.Enqueue(receivedPacket.Commands[i]);
+                for (int i = 0; i < receivedPacket.Commands.Count; i++)
+                    ReceivedCommands.Enqueue(receivedPacket.Commands[i]);
+            }
         }
 
         public uint GenerateAckBits()
@@ -134,6 +137,18 @@ namespace LarsenNetworking
 
         public void Update()
         {
+            lock (CommandsLock)
+            {
+                var ReliableOrdered = ReceivedCommands.Where(c => c.Method == SendingMethod.ReliableOrdered).OrderBy(c => c.OrderId);
+                var Reliable = ReceivedCommands.Where(c => c.Method == SendingMethod.Reliable);
+                var Unreliable = ReceivedCommands.Where(c => c.Method == SendingMethod.Unreliable).OrderByDescending(c => c.OrderId).LastOrDefault();
+
+                ReliableOrdered.ToList().ForEach(c => c.Execute());
+                Reliable.ToList().ForEach(c => c.Execute());
+                Unreliable?.Execute();
+
+                ReceivedCommands.Clear();
+            }
         }
         #endregion
     }
