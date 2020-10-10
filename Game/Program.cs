@@ -40,15 +40,15 @@ namespace Game
                         networker.Host();
                         Console.WriteLine("Server Started !\n");
 
-                        Task.Run(() =>
-                        {
-                            while (true)
-                                lock(networker.Clients)
-                                    foreach (var client in networker.Clients)
-                                        client.Value?.ToString();
-                        });
+                        //while (true)
+                        //    lock (networker.Clients)
+                        //        foreach (var client in networker.Clients)
+                        //            client.Value?.Update();
 
-                        break;
+                        while (true)
+                            for (int j = 0; j < networker.Clients.Count; j++)
+                                for (int i = 0; i < networker.Clients.Values.ToArray()[j].ReceivedCommands.Count; i++)
+                                    networker.Clients.Values.ToArray()[j].Update();
 
                     case 2:
                         Console.ForegroundColor = ConsoleColor.Green;
@@ -72,7 +72,7 @@ namespace Game
             Console.ReadLine();
         }
 
-        [CmdType(SendingMethod.Reliable)]
+        [CmdType(SendingMethod.ReliableOrdered)]
         public class PrintMessage : Command
         {
             [CmdField]

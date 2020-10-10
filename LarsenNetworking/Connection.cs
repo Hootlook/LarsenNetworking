@@ -21,21 +21,26 @@ namespace LarsenNetworking
         #region PacketHandling
         private object CommandsLock { get; set; } = new object();
         public List<Command> SendingCommands { get; set; } = new List<Command>();
-        public Queue<Command> ReceivedCommands { get; set; } = new Queue<Command>();
+        public List<Command> ReceivedCommands { get; set; } = new List<Command>();
         public int MtuLimit { get; set; } = MTU_LIMIT;
         public ushort Sequence { get; set; } 
         public ushort Ack { get; set; }
-        public ushort OrderId { get; set; }
+
+        public ushort RemoteReliableOrderId { get; set; }
+        public ushort LocalReliableOrderId { get; set; }
+        public ushort RemoteUnreliableOrderId { get; set; }
 
         public const int BUFFER_SIZE = 32;
         public const int MTU_LIMIT = 1408;
+        
+        private uint[] sequenceBuffer = new uint[BUFFER_SIZE];
+        private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
         public struct PacketData
         {
             public bool acked;
             public int time;
         }
-        private uint[] sequenceBuffer = new uint[BUFFER_SIZE];
-        private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
+        
         public ref PacketData InsertPacketData(uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
@@ -64,8 +69,11 @@ namespace LarsenNetworking
 
                 if (command != null)
                 {
-                    if (command.Method != SendingMethod.Reliable)
-                        command.OrderId = OrderId++;
+                    if (command.Method == SendingMethod.ReliableOrdered)
+                        command.OrderId = RemoteReliableOrderId++;
+
+                    if (command.Method == SendingMethod.Unreliable)
+                        command.OrderId = RemoteUnreliableOrderId++;
 
                     if (command.Method == SendingMethod.Unreliable)
                         outGoingPacket.WriteCommand(command);
@@ -111,7 +119,7 @@ namespace LarsenNetworking
                         SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
 
                 for (int i = 0; i < receivedPacket.Commands.Count; i++)
-                    ReceivedCommands.Enqueue(receivedPacket.Commands[i]);
+                    ReceivedCommands.Add(receivedPacket.Commands[i]);
             }
         }
 
@@ -139,15 +147,27 @@ namespace LarsenNetworking
         {
             lock (CommandsLock)
             {
-                var ReliableOrdered = ReceivedCommands.Where(c => c.Method == SendingMethod.ReliableOrdered).OrderBy(c => c.OrderId);
-                var Reliable = ReceivedCommands.Where(c => c.Method == SendingMethod.Reliable);
-                var Unreliable = ReceivedCommands.Where(c => c.Method == SendingMethod.Unreliable).OrderByDescending(c => c.OrderId).LastOrDefault();
+                if (ReceivedCommands.Count > 0)
+                {
+                    var ReliableOrdered = ReceivedCommands.Where(c => c.Method == SendingMethod.ReliableOrdered).OrderBy(c => c.OrderId).ToList();
+                    var Unreliable = ReceivedCommands.Where(c => c.Method == SendingMethod.Unreliable).OrderByDescending(c => c.OrderId).LastOrDefault();
+                    var Reliable = ReceivedCommands.Where(c => c.Method == SendingMethod.Reliable).ToList();
 
-                ReliableOrdered.ToList().ForEach(c => c.Execute());
-                Reliable.ToList().ForEach(c => c.Execute());
-                Unreliable?.Execute();
+                    foreach (var cmd in ReliableOrdered.Reverse<Command>())
+                    {
+                        if (cmd.OrderId == LocalReliableOrderId)
+                        {
+                            cmd.Execute();
+                            ReliableOrdered.Remove(cmd);
+                            LocalReliableOrderId++;
+                        }
+                    }
 
-                ReceivedCommands.Clear();
+                    Reliable.ForEach(c => c.Execute());
+                    Unreliable?.Execute();
+
+                    ReceivedCommands = ReliableOrdered;
+                }
             }
         }
         #endregion
