@@ -6,6 +6,8 @@ namespace LarsenNetworking
 {
     public class Packet
     {
+        public const string PROTOCOL_ID = "LarsenNetworking";
+
         public static Packet Empty { get { return new Packet(); }  }
         public ushort Sequence { get; set; }
         public ushort Ack { get; set; }
@@ -18,6 +20,7 @@ namespace LarsenNetworking
             using (var stream = new MemoryStream())
             using (var writer = new BinaryWriter(stream))
             {
+                writer.Write(PROTOCOL_ID);
                 writer.Write(Sequence);
                 writer.Write(Ack);
                 writer.Write(AckBits);
@@ -35,6 +38,8 @@ namespace LarsenNetworking
             {
                 try
                 {
+                    if (reader.ReadString() != PROTOCOL_ID) throw new Exception();
+
                     Packet packet = new Packet
                     {
                         Sequence = reader.ReadUInt16(),
@@ -76,7 +81,7 @@ namespace LarsenNetworking
                     writer.Write(command.OrderId);
 
                 for (int i = 0; i < command.Fields.Length; i++)
-                    writer.Write((dynamic)command.Fields[i].GetValue(command));
+                    writer.Write(command.Fields[i].GetValue(command));
 
                 byte[] buffer = stream.ToArray();
 
@@ -101,7 +106,11 @@ namespace System.IO
     {
         public static object Read(this BinaryReader reader, Type type)
         {
-            switch (type.Name)
+            string typeName = type.Name;
+
+        Retry:
+
+            switch (typeName)
             {
                 case "String":
                     return reader.ReadString();
@@ -119,10 +128,64 @@ namespace System.IO
                     return reader.ReadUInt16();
                 case "Byte":
                     return reader.ReadByte();
-
-                default:
-                    return null;
+                case "Enum":
+                    return reader.ReadInt32();
             }
+
+            if (typeName == type.BaseType.Name)
+                throw new ArgumentException("Can't read this type");
+
+            typeName = type.BaseType.Name;
+
+            goto Retry;
+        }
+    }
+
+    public static class BinaryWriterExtensions
+    {
+        public static void Write(this BinaryWriter writer, object obj)
+        {
+            string typeName = obj.GetType().Name;
+
+        Retry:
+
+            switch (typeName)
+            {
+                case "String":
+                    writer.Write((string)obj);
+                    return;
+                case "Int64":
+                    writer.Write((long)obj);
+                    return;
+                case "UInt64":
+                    writer.Write((ulong)obj);
+                    return;
+                case "Int32":
+                    writer.Write((int)obj);
+                    return;
+                case "UInt32":
+                    writer.Write((uint)obj);
+                    return;
+                case "Int16":
+                    writer.Write((short)obj);
+                    return;
+                case "UInt16":
+                    writer.Write((ushort)obj);
+                    return;
+                case "Byte":
+                    writer.Write((byte)obj);
+                    return;
+                case "Enum":
+                    writer.Write((int)obj);
+                    return;
+            }
+
+            if (typeName == obj.GetType().BaseType.Name)
+                throw new ArgumentException("Can't write this type");
+
+            typeName = obj.GetType().BaseType.Name;
+
+            goto Retry;
         }
     }
 }

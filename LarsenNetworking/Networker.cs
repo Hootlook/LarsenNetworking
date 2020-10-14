@@ -12,7 +12,6 @@ namespace LarsenNetworking
 	{
 		public const ushort DEFAULT_PORT = 26950;
 		public const ushort BUILD_VERSION = 1;
-		public const string CONNECT_MESSAGE = "Hello i'd like to play pls";
 		private const int SIO_UDP_CONNRESET = -1744830452;
 
 		public bool IsBound { get { return Socket.Client.IsBound; } }
@@ -65,7 +64,7 @@ namespace LarsenNetworking
 			while (!success)
 			{
 				Server.Send();
-				
+
 				if (Socket.Available > 0)
 					success = Socket.Receive(ref remoteIp).Length > 0;
 
@@ -148,6 +147,14 @@ namespace LarsenNetworking
 			}
 
 			return new IPEndPoint(ipAddress, port);
+		}
+
+		public class ConnectionMessage : Command
+		{
+			public override void Execute()
+			{
+				throw new NotImplementedException();
+			}
 		}
 	}
 }

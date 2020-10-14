@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using static LarsenNetworking.Networker;
 
 namespace Game
 {
@@ -13,8 +14,9 @@ namespace Game
             Networker networker = new Networker();
 
             Command.Register(new Command[] {
+                new StateMessage(StateMessage.ConnectionState.Connected),
+                new PrintMessage("NONE"),
                 new ConnectionMessage(),
-                new PrintMessage("NONE")
             });
 
             Console.WriteLine(Utils.label);
@@ -58,7 +60,8 @@ namespace Game
                             "Connection failed...\n");
 
                         while (true)
-                            networker.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
+                            networker.Send(new StateMessage(StateMessage.ConnectionState.Disconnected), new Random().Next(1, 3) == 1);
+                            //networker.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
 
                     default:
                         goto case 1;
@@ -89,11 +92,27 @@ namespace Game
             }
         }
 
-        public class ConnectionMessage : Command
+        [CmdType(SendingMethod.ReliableOrdered)]
+        public class StateMessage : Command
         {
+            public enum ConnectionState
+            {
+                Connected,
+                Disconnected,
+                Refused
+            }
+
+            [CmdField]
+            public ConnectionState state;
+
+            public StateMessage(ConnectionState state)
+            {
+                this.state = state;
+            }
+
             public override void Execute()
             {
-                throw new NotImplementedException();
+                Console.WriteLine(state);
             }
         }
     }
