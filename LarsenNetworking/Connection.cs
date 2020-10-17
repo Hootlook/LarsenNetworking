@@ -33,10 +33,11 @@ namespace LarsenNetworking
         public const int BUFFER_SIZE = 32;
         public const int MTU_LIMIT = 1408;
         
-        private uint[] sequenceBuffer = new uint[BUFFER_SIZE];
         private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
+
         public struct PacketData
         {
+            public uint sequence;
             public bool acked;
             public int time;
         }
@@ -44,14 +45,14 @@ namespace LarsenNetworking
         public ref PacketData InsertPacketData(uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
-            sequenceBuffer[index] = sequence;
+            packetDatas[index].sequence = sequence;
             return ref packetDatas[index];
         }
 
         public PacketData? GetPacketData(uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
-            if (sequenceBuffer[index] == sequence)
+            if (packetDatas[index].sequence == sequence)
                 return packetDatas[index];
             else
                 return null;
@@ -69,14 +70,14 @@ namespace LarsenNetworking
 
                 if (command != null)
                 {
+                    if (command.Method == SendingMethod.Unreliable)
+                    {
+                        command.OrderId = RemoteUnreliableOrderId++;
+                        outGoingPacket.WriteCommand(command);
+                    }
+
                     if (command.Method == SendingMethod.ReliableOrdered)
                         command.OrderId = RemoteReliableOrderId++;
-
-                    if (command.Method == SendingMethod.Unreliable)
-                        command.OrderId = RemoteUnreliableOrderId++;
-
-                    if (command.Method == SendingMethod.Unreliable)
-                        outGoingPacket.WriteCommand(command);
 
                     if (command.Method != SendingMethod.Unreliable)
                         SendingCommands.Add(command);
@@ -132,7 +133,7 @@ namespace LarsenNetworking
             {
                 uint index = (Ack - i) % BUFFER_SIZE;
 
-                uint sequence = sequenceBuffer[index];
+                uint sequence = packetDatas[index].sequence;
                 bool acked = packetDatas[index].acked;
 
                 if (acked && (sequence >= Ack - BUFFER_SIZE && sequence <= Ack))

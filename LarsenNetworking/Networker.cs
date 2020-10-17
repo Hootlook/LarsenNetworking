@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
-using System.Threading;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Timers;
+using System.Threading;
 
 namespace LarsenNetworking
 {
@@ -68,7 +69,7 @@ namespace LarsenNetworking
 				if (Socket.Available > 0)
 					success = Socket.Receive(ref remoteIp).Length > 0;
 
-				Thread.Sleep(1000);
+                Thread.Sleep(1000);
 
 				if (retry++ > 5) return false;
 			}
@@ -80,44 +81,110 @@ namespace LarsenNetworking
 
 		void StartWorking()
         {
-			Task.Run(() =>
-			{
-				IPEndPoint any = new IPEndPoint(IPAddress.Any, 0);
-				IPEndPoint sender;
-				Connection player;
-				byte[] buffer;
+            #region ByTask
+            Task.Run(() =>
+            {
+                IPEndPoint any = new IPEndPoint(IPAddress.Any, 0);
+                IPEndPoint sender;
+                Connection player;
+                byte[] buffer;
 
-				while (IsBound)
-				{
-					sender = ServerIp ?? any;
+                while (IsBound)
+                {
+                    sender = ServerIp ?? any;
 
-					buffer = Socket.Receive(ref sender);
+                    buffer = Socket.Receive(ref sender);
 
-					if (IsServer && !Clients.ContainsKey(sender))
-						Clients.Add(sender, new Connection(sender, Socket));
+                    if (IsServer && !Clients.ContainsKey(sender))
+                        Clients.Add(sender, new Connection(sender, Socket));
 
-					player = Server ?? Clients[sender];
+                    player = Server ?? Clients[sender];
 
-					player.Receive(buffer);
-				}
-			});
+                    player.Receive(buffer);
+                }
+            });
 
-			Task.Run(() =>
-			{
-				while (IsBound)
-				{
-					Thread.Sleep(1000 / TickRate);
+            Task.Run(() =>
+            {
+                while (IsBound)
+                {
+                    Thread.Sleep(1000 / TickRate);
 
-					if (IsServer)
-						foreach (var player in Clients)
-							player.Value.Send();
+                    if (IsServer)
+                        foreach (var player in Clients)
+                            player.Value.Send();
 
-					Server?.Send(fakeSend: new Random().Next(1, 3) == 1);
-				}
-			});
-		}
+                    Server?.Send(fakeSend: new Random().Next(1, 3) == 1);
+                }
+            });
+            #endregion
 
-		public void Send(Command command, bool fakeSend) => Server?.Send(command, fakeSend);
+            #region ByTimer
+            //IPEndPoint any = new IPEndPoint(IPAddress.Any, 0);
+            //IPEndPoint sender;
+            //Connection player;
+            //byte[] buffer;
+
+            //System.Timers.Timer r = new System.Timers.Timer();
+            //r.Elapsed += (o, e) =>
+            //{
+            //    sender = ServerIp ?? any;
+
+            //    buffer = Socket.Receive(ref sender);
+
+            //    if (IsServer && !Clients.ContainsKey(sender))
+            //        Clients.Add(sender, new Connection(sender, Socket));
+
+            //    player = Server ?? Clients[sender];
+
+            //    player.Receive(buffer);
+            //};
+            //r.Start();
+
+            //System.Timers.Timer s = new System.Timers.Timer(1000 / TickRate);
+            //s.Elapsed += (f, e) =>
+            //{
+            //    if (IsServer)
+            //        foreach (var client in Clients)
+            //            client.Value.Send();
+
+            //    Server?.Send(fakeSend: new Random().Next(1, 3) == 1);
+            //};
+            //s.Start();
+            #endregion
+
+            #region ByTimerTask
+            //IPEndPoint any = new IPEndPoint(IPAddress.Any, 0);
+            //IPEndPoint sender;
+            //Connection player;
+            //byte[] buffer;
+
+            //System.Threading.Timer t = new System.Threading.Timer(s =>
+            //{
+            //    sender = ServerIp ?? any;
+
+            //    buffer = Socket.Receive(ref sender);
+
+            //    if (IsServer && !Clients.ContainsKey(sender))
+            //        Clients.Add(sender, new Connection(sender, Socket));
+
+            //    player = Server ?? Clients[sender];
+
+            //    player.Receive(buffer);
+            //}, null, 0, Timeout.Infinite);
+
+            //System.Threading.Timer g = new System.Threading.Timer(s =>
+            //{
+            //    if (IsServer)
+            //        foreach (var client in Clients)
+            //            client.Value.Send();
+
+            //    Server?.Send(fakeSend: new Random().Next(1, 3) == 1);
+            //}, null, 0, 1000 / TickRate);
+            #endregion
+        }
+
+        public void Send(Command command, bool fakeSend) => Server?.Send(command, fakeSend);
 
 		public static IPEndPoint ResolveHost(string host, ushort port)
 		{

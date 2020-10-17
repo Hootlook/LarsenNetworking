@@ -60,8 +60,8 @@ namespace Game
                             "Connection failed...\n");
 
                         while (true)
-                            networker.Send(new StateMessage(StateMessage.ConnectionState.Disconnected), new Random().Next(1, 3) == 1);
-                            //networker.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
+                            //networker.Send(new StateMessage(StateMessage.ConnectionState.Disconnected), new Random().Next(1, 3) == 1);
+                            networker.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
 
                     default:
                         goto case 1;
