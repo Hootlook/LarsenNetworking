@@ -89,5 +89,34 @@ namespace LarsenNetworking
             Reliable,
             ReliableOrdered
         }
+
+        #region BaseCommands
+
+        [CmdType(SendingMethod.ReliableOrdered)]
+        public class ServerCommand : Command
+        {
+            public enum ServerEvent
+            {
+                RequestConnection,
+                Connected,
+                Disconnected,
+                Refused
+            }
+
+            [CmdField]
+            public ServerEvent state;
+
+            public ServerCommand(ServerEvent state)
+            {
+                this.state = state;
+            }
+
+            public override void Execute()
+            {
+                Console.WriteLine(state);
+            }
+        }
+
+        #endregion
     }
 }

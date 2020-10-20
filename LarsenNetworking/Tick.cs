@@ -6,7 +6,22 @@ namespace LarsenNetworking
     {
         private Stopwatch Timer { get; set; }
         private long LastTick { get; set; }
-        public int Rate { get; set; } = 30;
+
+        private int _rate = 30;
+
+        public int Rate
+        {
+            get { return 1000 / _rate; }
+            set
+            {
+                if (value > 170)
+                    _rate = 170;
+                else if (value < 20)
+                    _rate = 20;
+                else
+                    _rate = value;
+            }
+        }
 
         public Tick(Stopwatch timer) => Timer = timer;
 

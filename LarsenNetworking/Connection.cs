@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -10,18 +11,20 @@ namespace LarsenNetworking
     public class Connection
     {
         public IPEndPoint Ip { get; set; }
-        public UdpClient Socket { get; set; }
+        public Networker Networker { get; set; }
+        public long LastPing { get; set; }
+        public long Ping { get; set; }
 
-        public Connection(IPEndPoint ip, UdpClient socket)
+        public Connection(IPEndPoint ip, Networker networker)
         {
-            Socket = socket;
+            Networker = networker;
             Ip = ip;
         }
 
         #region PacketHandling
         private object CommandsLock { get; set; } = new object();
-        public List<Command> SendingCommands { get; set; } = new List<Command>();
         public List<Command> ReceivedCommands { get; set; } = new List<Command>();
+        public List<Command> SendingCommands { get; set; } = new List<Command>();
         public int MtuLimit { get; set; } = MTU_LIMIT;
         public ushort Sequence { get; set; } 
         public ushort Ack { get; set; }
@@ -33,29 +36,52 @@ namespace LarsenNetworking
         public const int BUFFER_SIZE = 32;
         public const int MTU_LIMIT = 1408;
         
-        private PacketData[] packetDatas = new PacketData[BUFFER_SIZE];
+        private PacketData[] localPacketData = new PacketData[BUFFER_SIZE];
+        private PacketData[] remotePacketData = new PacketData[BUFFER_SIZE];
 
         public struct PacketData
         {
             public uint sequence;
             public bool acked;
-            public int time;
+            public long time;
         }
         
-        public ref PacketData InsertPacketData(uint sequence)
+        public ref PacketData InsertPacketData(PacketData[] packetDatas, uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
             packetDatas[index].sequence = sequence;
             return ref packetDatas[index];
         }
 
-        public PacketData? GetPacketData(uint sequence)
+        public PacketData? GetPacketData(PacketData[] packetDatas, uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
-            if (packetDatas[index].sequence == sequence)
-                return packetDatas[index];
-            else
-                return null;
+            return packetDatas[index].sequence == sequence ? (PacketData?)packetDatas[index] : null;
+        }
+
+        public bool PacketDataAlreadyExist(PacketData[] packetDatas, uint sequence)
+        {
+            return packetDatas[sequence % BUFFER_SIZE].sequence == sequence;
+        }
+
+        public uint GenerateAckBits()
+        {
+            uint bits = 0;
+            uint mask = 1;
+
+            for (uint i = 0; i < localPacketData.Length; i++)
+            {
+                uint index = (Ack - i) % BUFFER_SIZE;
+
+                uint sequence = localPacketData[index].sequence;
+                bool acked = localPacketData[index].acked;
+
+                if (acked && (sequence >= Ack - BUFFER_SIZE && sequence <= Ack))
+                    bits |= mask;
+                mask <<= 1;
+            }
+
+            return bits;
         }
 
         public void Send(Command command = null, bool fakeSend = false)
@@ -93,10 +119,12 @@ namespace LarsenNetworking
                     outGoingPacket.WriteCommand(SendingCommands[i]);
                 }
 
+                InsertPacketData(localPacketData, outGoingPacket.Sequence).time = Networker.Time.ElapsedMilliseconds;
+
                 byte[] packet = outGoingPacket.Pack();
 
                 if(!fakeSend)
-                    Socket.Send(packet, packet.Length, Ip);
+                    Networker.Socket.Send(packet, packet.Length, Ip);
             }
         }
 
@@ -110,38 +138,23 @@ namespace LarsenNetworking
                 if (receivedPacket.IsNewerThan(Ack))
                     Ack = receivedPacket.Sequence;
 
-                else if (GetPacketData(Ack).Value.acked)
+                else if (PacketDataAlreadyExist(remotePacketData, Ack))
                     return;
 
-                InsertPacketData(receivedPacket.Sequence).acked = true;
+                InsertPacketData(remotePacketData, receivedPacket.Sequence).acked = true;
+                
+                PacketData? data = GetPacketData(localPacketData, receivedPacket.Ack);
 
-                for (int bit = 0; bit < packetDatas.Length; bit++)
+                if (data != null)
+                    Ping += (long)((Networker.Time.ElapsedMilliseconds - data.Value.time - Ping) * 0.1);
+
+                for (int bit = 0; bit < localPacketData.Length; bit++)
                     if ((receivedPacket.AckBits & (1 << bit)) != 0)
                         SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
 
                 for (int i = 0; i < receivedPacket.Commands.Count; i++)
                     ReceivedCommands.Add(receivedPacket.Commands[i]);
             }
-        }
-
-        public uint GenerateAckBits()
-        {
-            uint bits = 0;
-            uint mask = 1;
-
-            for (uint i = 0; i < packetDatas.Length; i++)
-            {
-                uint index = (Ack - i) % BUFFER_SIZE;
-
-                uint sequence = packetDatas[index].sequence;
-                bool acked = packetDatas[index].acked;
-
-                if (acked && (sequence >= Ack - BUFFER_SIZE && sequence <= Ack))
-                    bits |= mask;
-                mask <<= 1;
-            }
-
-            return bits;
         }
 
         public void Update()

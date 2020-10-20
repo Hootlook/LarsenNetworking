@@ -3,6 +3,8 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
+using static LarsenNetworking.Command;
 using static LarsenNetworking.Networker;
 
 namespace Game
@@ -11,12 +13,13 @@ namespace Game
     {
         static void Main(string[] args)
         {
-            Networker networker = new Networker();
+            Server server = new Server();
+            Client client = new Client();
 
             Command.Register(new Command[] {
-                new StateMessage(StateMessage.ConnectionState.Connected),
+                //new StateMessage(StateMessage.ConnectionState.Connected),
+                new ServerCommand(ServerCommand.ServerEvent.Refused),
                 new PrintMessage("NONE"),
-                new ConnectionMessage(),
             });
 
             Console.WriteLine(Utils.label);
@@ -30,7 +33,8 @@ namespace Game
 
             Console.WriteLine("\nTickRate in ms ?");
             int.TryParse(Console.ReadLine(), out int tick);
-            networker.TickRate = tick;
+            client.Tick.Rate = tick;
+            server.Tick.Rate = tick;
 
             try
             {
@@ -39,29 +43,38 @@ namespace Game
                     case 1:
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.Clear();
-                        networker.Host();
+                        server.Host();
                         Console.WriteLine("Server Started !\n");
 
-                        //while (true)
-                        //    lock (networker.Clients)
-                        //        foreach (var client in networker.Clients)
-                        //            client.Value?.Update();
-
                         while (true)
-                            for (int j = 0; j < networker.Clients.Count; j++)
-                                for (int i = 0; i < networker.Clients.Values.ToArray()[j].ReceivedCommands.Count; i++)
-                                    networker.Clients.Values.ToArray()[j].Update();
+                            server.Update();
 
                     case 2:
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.Clear();
-                        Console.WriteLine(networker.Connect() ?
+                        Console.WriteLine(client.Connect() ?
                             "Connection established !\n" :
                             "Connection failed...\n");
 
+                        //int lastSeq = 0;
+                        //var t = new System.Timers.Timer(1000);
+                        //t.Elapsed += (o, e) =>
+                        //{
+                        //    Console.WriteLine(networker.Server.Sequence - lastSeq);
+                        //    lastSeq = networker.Server.Sequence;
+                        //};
+                        //t.Start();
+
                         while (true)
-                            //networker.Send(new StateMessage(StateMessage.ConnectionState.Disconnected), new Random().Next(1, 3) == 1);
-                            networker.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
+                        {
+                            //Thread.Sleep(100);
+                            //Console.SetCursorPosition(0, 1);
+                            //Console.Clear();
+                            //Console.WriteLine($"Ping : {client.Server.Ping}");
+                            //server.Send(new StateMessage(StateMessage.ConnectionState.Disconnected), new Random().Next(1, 3) == 1);
+                            //server.Send(new ServerCommand(ServerCommand.ServerEvent.RequestConnection), new Random().Next(1, 3) == 1);
+                            client.Send(new PrintMessage(Console.ReadLine()), new Random().Next(1, 3) == 1);
+                        }
 
                     default:
                         goto case 1;
@@ -89,30 +102,6 @@ namespace Game
             public override void Execute()
             {
                 Console.WriteLine(Message);
-            }
-        }
-
-        [CmdType(SendingMethod.ReliableOrdered)]
-        public class StateMessage : Command
-        {
-            public enum ConnectionState
-            {
-                Connected,
-                Disconnected,
-                Refused
-            }
-
-            [CmdField]
-            public ConnectionState state;
-
-            public StateMessage(ConnectionState state)
-            {
-                this.state = state;
-            }
-
-            public override void Execute()
-            {
-                Console.WriteLine(state);
             }
         }
     }
