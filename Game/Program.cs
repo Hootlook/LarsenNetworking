@@ -1,5 +1,6 @@
 ﻿using LarsenNetworking;
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +19,8 @@ namespace Game
 
             Command.Register(new Command[] {
                 //new StateMessage(StateMessage.ConnectionState.Connected),
-                new ServerCommand(ServerCommand.ServerEvent.Refused),
+                new NetEventCommand(NetEvent.None),
+                new ConnectionRequest(0),
                 new PrintMessage("NONE"),
             });
 
@@ -91,17 +93,26 @@ namespace Game
         [CmdType(SendingMethod.ReliableOrdered)]
         public class PrintMessage : Command
         {
-            [CmdField]
-            public string Message;
+            public string Message { get; set; }
 
             public PrintMessage(string message)
             {
                 Message = message;
             }
 
-            public override void Execute()
+            public override void Action()
             {
                 Console.WriteLine(Message);
+            }
+
+            public override void Serialize(BinaryWriter writer)
+            {
+                writer.Write(Message);
+            }
+
+            public override void Deserialize(BinaryReader reader)
+            {
+                Message = reader.ReadString();
             }
         }
     }

@@ -25,6 +25,21 @@ namespace LarsenNetworking
 
         public Tick(Stopwatch timer) => Timer = timer;
 
+        public int Remain()
+        {
+            return (int)(!IsNow() ? Timer.ElapsedMilliseconds - LastTick : 0);
+        }
+
+        public void Reset()
+        {
+            LastTick = Timer.ElapsedMilliseconds;
+        }
+
+        public bool IsNow()
+        {
+            return Timer.ElapsedMilliseconds - LastTick >= Rate;
+        }
+
         public bool TryTick()
         {
             if (Timer.ElapsedMilliseconds - LastTick <= (1000 / Rate))

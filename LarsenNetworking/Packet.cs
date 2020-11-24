@@ -31,14 +31,41 @@ namespace LarsenNetworking
             }
         }
 
-        public static Packet Unpack(byte[] buffer)
+        public static Packet TryUnpackHeader(byte[] buffer)
         {
             using (var stream = new MemoryStream(buffer))
             using (var reader = new BinaryReader(stream))
             {
                 try
                 {
-                    if (reader.ReadString() != PROTOCOL_ID) throw new Exception();
+                    if (reader.ReadString() != PROTOCOL_ID) return null;
+
+                    Packet packet = new Packet
+                    {
+                        Sequence = reader.ReadUInt16(),
+                        Ack = reader.ReadUInt16(),
+                        AckBits = reader.ReadUInt32()
+                    };
+
+                    packet.Data.AddRange(stream.ToArray());
+
+                    return packet;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+            }
+        }
+
+        public static Packet TryUnpack(byte[] buffer)
+        {
+            using (var stream = new MemoryStream(buffer))
+            using (var reader = new BinaryReader(stream))
+            {
+                try
+                {
+                    if (reader.ReadString() != PROTOCOL_ID) return null;
 
                     Packet packet = new Packet
                     {
@@ -54,8 +81,7 @@ namespace LarsenNetworking
                         if (command.Method != Command.SendingMethod.Reliable)
                             command.OrderId = reader.ReadUInt16();
 
-                        for (int i = 0; i < command.Fields.Length; i++)
-                            command.Fields[i].SetValue(command, reader.Read(command.Fields[i].FieldType));
+                        command.Deserialize(reader);
 
                         packet.Commands.Add(command);
                     }
@@ -70,28 +96,6 @@ namespace LarsenNetworking
             }
         }
 
-        public int WriteCommand(Command command)
-        {
-            using (var stream = new MemoryStream())
-            using (var writer = new BinaryWriter(stream))
-            {
-                writer.Write(command.Id);
-
-                if (command.Method != Command.SendingMethod.Reliable)
-                    writer.Write(command.OrderId);
-
-                for (int i = 0; i < command.Fields.Length; i++)
-                    writer.Write(command.Fields[i].GetValue(command));
-
-                byte[] buffer = stream.ToArray();
-
-                for (int a = 0; a < buffer.Length; a++)
-                    Data.Add(buffer[a]);
-
-                return buffer.Length;
-            }
-        }
-
         public bool IsNewerThan(ushort sequence)
         {
             return ((Sequence > sequence) && (Sequence - sequence <= 32768)) ||
@@ -100,92 +104,92 @@ namespace LarsenNetworking
     }
 }
 
-namespace System.IO
-{
-    public static class BinaryReaderExtensions
-    {
-        public static object Read(this BinaryReader reader, Type type)
-        {
-            string typeName = type.Name;
+//namespace System.IO
+//{
+//    public static class BinaryReaderExtensions
+//    {
+//        public static object Read(this BinaryReader reader, Type type)
+//        {
+//            string typeName = type.Name;
 
-        Retry:
+//        Retry:
 
-            switch (typeName)
-            {
-                case "String":
-                    return reader.ReadString();
-                case "Int64":
-                    return reader.ReadInt64();
-                case "UInt64":
-                    return reader.ReadUInt64();
-                case "Int32":
-                    return reader.ReadInt32();
-                case "UInt32":
-                    return reader.ReadUInt32();
-                case "Int16":
-                    return reader.ReadInt16();
-                case "UInt16":
-                    return reader.ReadUInt16();
-                case "Byte":
-                    return reader.ReadByte();
-                case "Enum":
-                    return reader.ReadInt32();
-            }
+//            switch (typeName)
+//            {
+//                case "String":
+//                    return reader.ReadString();
+//                case "Int64":
+//                    return reader.ReadInt64();
+//                case "UInt64":
+//                    return reader.ReadUInt64();
+//                case "Int32":
+//                    return reader.ReadInt32();
+//                case "UInt32":
+//                    return reader.ReadUInt32();
+//                case "Int16":
+//                    return reader.ReadInt16();
+//                case "UInt16":
+//                    return reader.ReadUInt16();
+//                case "Byte":
+//                    return reader.ReadByte();
+//                case "Enum":
+//                    return reader.ReadInt32();
+//            }
 
-            if (typeName == type.BaseType.Name)
-                throw new ArgumentException("Can't read this type");
+//            if (typeName == type.BaseType.Name)
+//                throw new ArgumentException("Can't read this type");
 
-            typeName = type.BaseType.Name;
+//            typeName = type.BaseType.Name;
 
-            goto Retry;
-        }
-    }
+//            goto Retry;
+//        }
+//    }
 
-    public static class BinaryWriterExtensions
-    {
-        public static void Write(this BinaryWriter writer, object obj)
-        {
-            string typeName = obj.GetType().Name;
+//    public static class BinaryWriterExtensions
+//    {
+//        public static void Write(this BinaryWriter writer, object obj)
+//        {
+//            string typeName = obj.GetType().Name;
 
-        Retry:
+//        Retry:
 
-            switch (typeName)
-            {
-                case "String":
-                    writer.Write((string)obj);
-                    return;
-                case "Int64":
-                    writer.Write((long)obj);
-                    return;
-                case "UInt64":
-                    writer.Write((ulong)obj);
-                    return;
-                case "Int32":
-                    writer.Write((int)obj);
-                    return;
-                case "UInt32":
-                    writer.Write((uint)obj);
-                    return;
-                case "Int16":
-                    writer.Write((short)obj);
-                    return;
-                case "UInt16":
-                    writer.Write((ushort)obj);
-                    return;
-                case "Byte":
-                    writer.Write((byte)obj);
-                    return;
-                case "Enum":
-                    writer.Write((int)obj);
-                    return;
-            }
+//            switch (typeName)
+//            {
+//                case "String":
+//                    writer.Write((string)obj);
+//                    return;
+//                case "Int64":
+//                    writer.Write((long)obj);
+//                    return;
+//                case "UInt64":
+//                    writer.Write((ulong)obj);
+//                    return;
+//                case "Int32":
+//                    writer.Write((int)obj);
+//                    return;
+//                case "UInt32":
+//                    writer.Write((uint)obj);
+//                    return;
+//                case "Int16":
+//                    writer.Write((short)obj);
+//                    return;
+//                case "UInt16":
+//                    writer.Write((ushort)obj);
+//                    return;
+//                case "Byte":
+//                    writer.Write((byte)obj);
+//                    return;
+//                case "Enum":
+//                    writer.Write((int)obj);
+//                    return;
+//            }
 
-            if (typeName == obj.GetType().BaseType.Name)
-                throw new ArgumentException("Can't write this type");
+//            if (typeName == obj.GetType().BaseType.Name)
+//                throw new ArgumentException("Can't write this type");
 
-            typeName = obj.GetType().BaseType.Name;
+//            typeName = obj.GetType().BaseType.Name;
 
-            goto Retry;
-        }
-    }
-}
+//            goto Retry;
+//        }
+//    }
+//}

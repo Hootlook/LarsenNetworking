@@ -18,12 +18,14 @@ namespace LarsenNetworking
 		public UdpClient Socket { get; private set; }
 		public Tick Tick { get; private set; }
         public Stopwatch Time { get; private set; }
+        public Random Salt { get; set; }
 
         public Networker()
 		{
 			Socket = new UdpClient();
 			Time = new Stopwatch();
 			Tick = new Tick(Time);
+            Salt = new Random();
 
 			Time.Start();
 
@@ -35,6 +37,17 @@ namespace LarsenNetworking
         public abstract void Receive();
         public abstract void Sending();
         public abstract void Update();
+
+        public void SendEvent(NetEvent netEvent, IPEndPoint target, byte[] data = null)
+        {
+            Packet reply = Packet.Empty;
+
+            reply.Data.AddRange(new NetEventCommand(netEvent).GetBytes());
+
+            byte[] replyPacked = reply.Pack();
+
+            Socket.Send(replyPacked, replyPacked.Length, target);
+        }
 
 		void StartWorking()
         {
@@ -201,7 +214,7 @@ namespace LarsenNetworking
 
                 for (int i = 0; i < pendingForUpdate.Count; i++)
                 {
-                    pendingForUpdate[i].Execute();
+                    pendingForUpdate[i].Action();
                 }
             }
         }

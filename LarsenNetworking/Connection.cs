@@ -14,6 +14,14 @@ namespace LarsenNetworking
         public Networker Networker { get; set; }
         public long LastPing { get; set; }
         public long Ping { get; set; }
+        public ConnectionState State { get; set; }
+
+        public enum ConnectionState
+        {
+            Disconnected,
+            Connecting,
+            Connected
+        }
 
         public Connection(IPEndPoint ip, Networker networker)
         {
@@ -36,30 +44,30 @@ namespace LarsenNetworking
         public const int BUFFER_SIZE = 32;
         public const int MTU_LIMIT = 1408;
         
-        private PacketData[] localPacketData = new PacketData[BUFFER_SIZE];
-        private PacketData[] remotePacketData = new PacketData[BUFFER_SIZE];
+        private PacketInfo[] localPacketData = new PacketInfo[BUFFER_SIZE];
+        private PacketInfo[] remotePacketData = new PacketInfo[BUFFER_SIZE];
 
-        public struct PacketData
+        public struct PacketInfo
         {
             public uint sequence;
             public bool acked;
             public long time;
         }
         
-        public ref PacketData InsertPacketData(PacketData[] packetDatas, uint sequence)
+        public ref PacketInfo InsertPacketData(PacketInfo[] packetDatas, uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
             packetDatas[index].sequence = sequence;
             return ref packetDatas[index];
         }
 
-        public PacketData? GetPacketData(PacketData[] packetDatas, uint sequence)
+        public PacketInfo? GetPacketData(PacketInfo[] packetDatas, uint sequence)
         {
             uint index = sequence % BUFFER_SIZE;
-            return packetDatas[index].sequence == sequence ? (PacketData?)packetDatas[index] : null;
+            return packetDatas[index].sequence == sequence ? (PacketInfo?)packetDatas[index] : null;
         }
 
-        public bool PacketDataAlreadyExist(PacketData[] packetDatas, uint sequence)
+        public bool PacketDataAlreadyExist(PacketInfo[] packetDatas, uint sequence)
         {
             return packetDatas[sequence % BUFFER_SIZE].sequence == sequence;
         }
@@ -69,12 +77,12 @@ namespace LarsenNetworking
             uint bits = 0;
             uint mask = 1;
 
-            for (uint i = 0; i < localPacketData.Length; i++)
+            for (uint i = 0; i < remotePacketData.Length; i++)
             {
                 uint index = (Ack - i) % BUFFER_SIZE;
 
-                uint sequence = localPacketData[index].sequence;
-                bool acked = localPacketData[index].acked;
+                uint sequence = remotePacketData[index].sequence;
+                bool acked = remotePacketData[index].acked;
 
                 if (acked && (sequence >= Ack - BUFFER_SIZE && sequence <= Ack))
                     bits |= mask;
@@ -82,6 +90,35 @@ namespace LarsenNetworking
             }
 
             return bits;
+        }
+
+        public void Receive(byte[] buffer)
+        {
+            lock (CommandsLock)
+            {
+                Packet receivedPacket = Packet.TryUnpack(buffer);
+                if (receivedPacket == null) return;
+
+                if (receivedPacket.IsNewerThan(Ack))
+                    Ack = receivedPacket.Sequence;
+
+                else if (PacketDataAlreadyExist(remotePacketData, Ack))
+                    return;
+
+                InsertPacketData(remotePacketData, receivedPacket.Sequence).acked = true;
+
+                PacketInfo? data = GetPacketData(localPacketData, receivedPacket.Ack);
+
+                if (data != null)
+                    Ping += (long)((Networker.Time.ElapsedMilliseconds - data.Value.time - Ping) * 0.1);
+
+                for (int bit = 0; bit < localPacketData.Length; bit++)
+                    if ((receivedPacket.AckBits & (1 << bit)) != 0)
+                        SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
+
+                for (int i = 0; i < receivedPacket.Commands.Count; i++)
+                    ReceivedCommands.Add(receivedPacket.Commands[i]);
+            }
         }
 
         public void Send(Command command = null, bool fakeSend = false)
@@ -99,7 +136,7 @@ namespace LarsenNetworking
                     if (command.Method == SendingMethod.Unreliable)
                     {
                         command.OrderId = RemoteUnreliableOrderId++;
-                        outGoingPacket.WriteCommand(command);
+                        outGoingPacket.Data.AddRange(command.GetBytes());
                     }
 
                     if (command.Method == SendingMethod.ReliableOrdered)
@@ -116,7 +153,7 @@ namespace LarsenNetworking
 
                     SendingCommands[i].PacketId = outGoingPacket.Sequence;
                     SendingCommands[i].SendTime = DateTime.Now;
-                    outGoingPacket.WriteCommand(SendingCommands[i]);
+                    outGoingPacket.Data.AddRange(SendingCommands[i].GetBytes());
                 }
 
                 InsertPacketData(localPacketData, outGoingPacket.Sequence).time = Networker.Time.ElapsedMilliseconds;
@@ -125,35 +162,6 @@ namespace LarsenNetworking
 
                 if(!fakeSend)
                     Networker.Socket.Send(packet, packet.Length, Ip);
-            }
-        }
-
-        public void Receive(byte[] buffer)
-        {
-            lock (CommandsLock)
-            {
-                Packet receivedPacket = Packet.Unpack(buffer);
-                if (receivedPacket == null) return;
-
-                if (receivedPacket.IsNewerThan(Ack))
-                    Ack = receivedPacket.Sequence;
-
-                else if (PacketDataAlreadyExist(remotePacketData, Ack))
-                    return;
-
-                InsertPacketData(remotePacketData, receivedPacket.Sequence).acked = true;
-                
-                PacketData? data = GetPacketData(localPacketData, receivedPacket.Ack);
-
-                if (data != null)
-                    Ping += (long)((Networker.Time.ElapsedMilliseconds - data.Value.time - Ping) * 0.1);
-
-                for (int bit = 0; bit < localPacketData.Length; bit++)
-                    if ((receivedPacket.AckBits & (1 << bit)) != 0)
-                        SendingCommands.RemoveAll(m => m.PacketId == receivedPacket.Ack - bit);
-
-                for (int i = 0; i < receivedPacket.Commands.Count; i++)
-                    ReceivedCommands.Add(receivedPacket.Commands[i]);
             }
         }
 
@@ -167,18 +175,18 @@ namespace LarsenNetworking
                     var Unreliable = ReceivedCommands.Where(c => c.Method == SendingMethod.Unreliable).OrderByDescending(c => c.OrderId).LastOrDefault();
                     var Reliable = ReceivedCommands.Where(c => c.Method == SendingMethod.Reliable).ToList();
 
-                    foreach (var cmd in ReliableOrdered.Reverse<Command>())
+                    foreach (var cmd in ReliableOrdered.ToArray())
                     {
                         if (cmd.OrderId == LocalReliableOrderId)
                         {
-                            cmd.Execute();
+                            cmd.Action();
                             ReliableOrdered.Remove(cmd);
                             LocalReliableOrderId++;
                         }
                     }
 
-                    Reliable.ForEach(c => c.Execute());
-                    Unreliable?.Execute();
+                    Reliable.ForEach(c => c.Action());
+                    Unreliable?.Action();
 
                     ReceivedCommands = ReliableOrdered;
                 }

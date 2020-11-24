@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -11,14 +12,15 @@ namespace LarsenNetworking
         public static Dictionary<Type, int> Lookup { get; set; }
         public static bool Initialized { get; private set; }
         public SendingMethod Method { get; private set; }
-        public FieldInfo[] Fields { get; set; }
         public int Size { get; private set; }
         public int Id { get; private set; }
         public ushort PacketId { get; set; }
         public ushort OrderId { get; set; }
         public DateTime SendTime { get; set; }
 
-        public abstract void Execute();
+        public abstract void Action();
+        public abstract void Serialize(BinaryWriter writer);
+        public abstract void Deserialize(BinaryReader reader);
 
         public Command Clone() => (Command)MemberwiseClone();
 
@@ -29,7 +31,6 @@ namespace LarsenNetworking
             Command command = List[Lookup[GetType()]];
 
             Method = command.Method;
-            Fields = command.Fields;
             Size = command.Size;
             Id = command.Id;
         }
@@ -42,12 +43,10 @@ namespace LarsenNetworking
             foreach (Command command in commandes)
             {
                 Type type = command.GetType();
-                Type attField = typeof(CmdFieldAttribute);
                 Type attType = typeof(CmdTypeAttribute);
 
                 command.Method = (type.GetCustomAttribute(attType, false) as CmdTypeAttribute)?.Method ?? SendingMethod.ReliableOrdered;
-                command.Fields = type.GetFields().Where(i => i.GetCustomAttributes(attField, false).Length > 0).ToArray();
-                command.Size = Packet.Empty.WriteCommand(command);
+                command.Size = command.GetBytes().Length;
                 command.Id = List.Count;
 
                 Lookup.Add(type, command.Id);
@@ -55,6 +54,22 @@ namespace LarsenNetworking
             }
 
             Initialized = true;
+        }
+
+        public byte[] GetBytes()
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write(Id);
+
+                if (Method != SendingMethod.Reliable)
+                    writer.Write(OrderId);
+
+                Serialize(writer);
+
+                return stream.ToArray();
+            }
         }
 
         //public static void Initialize()
@@ -73,6 +88,35 @@ namespace LarsenNetworking
         //    }
         //}
 
+        public static NetEvent GetEvent(Packet packet)
+        {
+            return !(TryUnpack(packet.Data.ToArray()) is NetEventCommand netEvent) ? NetEvent.None : netEvent.State;
+        }
+
+        public static Command TryUnpack(byte[] buffer)
+        {
+            using (var stream = new MemoryStream(buffer))
+            using (var reader = new BinaryReader(stream))
+            {
+                try
+                {
+                    Command command = List[reader.ReadInt32()].Clone();
+
+                    if (command.Method != SendingMethod.Reliable)
+                        command.OrderId = reader.ReadUInt16();
+
+                    command.Deserialize(reader);
+
+                    return command;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+            }
+        }
+
+        #region Attributes
         [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
         public class CmdTypeAttribute : Attribute
         {
@@ -82,6 +126,7 @@ namespace LarsenNetworking
 
         [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
         public class CmdFieldAttribute : Attribute { }
+        #endregion
 
         public enum SendingMethod
         {
@@ -89,34 +134,79 @@ namespace LarsenNetworking
             Reliable,
             ReliableOrdered
         }
+    }
 
-        #region BaseCommands
+    #region BaseCommands
+    public enum NetEvent
+    {
+        None,
+        ConnectionRequest,
+        Connected,
+        Disconnected,
+        ServerFull,
+        Accepted
+    }
 
-        [CmdType(SendingMethod.ReliableOrdered)]
-        public class ServerCommand : Command
+    public class ConnectionRequest : Command
+    {
+        public int ClientSalt { get; set; }
+        public int ChallengeSalt { get; set; }
+
+        public ConnectionRequest(int clientSalt)
         {
-            public enum ServerEvent
-            {
-                RequestConnection,
-                Connected,
-                Disconnected,
-                Refused
-            }
-
-            [CmdField]
-            public ServerEvent state;
-
-            public ServerCommand(ServerEvent state)
-            {
-                this.state = state;
-            }
-
-            public override void Execute()
-            {
-                Console.WriteLine(state);
-            }
+            ClientSalt = clientSalt;
+        }
+        public ConnectionRequest(int clientSalt, int challengeSalt)
+        {
+            ClientSalt = clientSalt;
+            ChallengeSalt = challengeSalt;
         }
 
-        #endregion
+        public override void Action()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Deserialize(BinaryReader reader)
+        {
+            ClientSalt = reader.ReadInt32();
+            ChallengeSalt = reader.ReadInt32();
+        }
+
+        public override void Serialize(BinaryWriter writer)
+        {
+            writer.Write(ClientSalt);
+            writer.Write(ChallengeSalt);
+        }
     }
+
+    [CmdType(SendingMethod.ReliableOrdered)]
+    public class NetEventCommand : Command
+    {
+        public NetEvent State { get; set; }
+        public byte[] Data { get; set; }
+
+        public NetEventCommand(NetEvent state, byte[] data = null)
+        {
+            State = state;
+            Data = data;
+        }
+
+        public override void Action()
+        {
+            Console.WriteLine(State);
+        }
+
+        public override void Serialize(BinaryWriter writer)
+        {
+            writer.Write((byte)State);
+        }
+
+        public override void Deserialize(BinaryReader reader)
+        {
+            State = (NetEvent)reader.ReadByte();
+        }
+    }
+
+    #endregion
 }
